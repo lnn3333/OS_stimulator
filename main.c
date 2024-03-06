@@ -11,10 +11,12 @@ int findPID()
 // comparator function
 bool pComparator(void *pItem, void *pComparisonArg)
 {
-    const PCB *PCB_pItem = (PCB *)pItem;
+    const Node *Node_pItem = (Node *)pItem;
+    PCB* PCB_pItem = Node_pItem->pItem;
+    int PID_pItem = PCB_pItem->pid;
     const int *int_pComparisonArg = (int *)pComparisonArg;
 
-    return (PCB_pItem->pid == *int_pComparisonArg);
+    return (PID_pItem == *int_pComparisonArg);
 };
 
 // Search and Kill function
@@ -75,12 +77,13 @@ PCB* findPCB(int pid){
     return PCBSender;
 }
 
+
 //display info of the PCB
 void total_info_helper(PCB* pcb){
 
     if( pcb == NULL){
         printf("Error: cannot get the Sender PCB\n");
-        return 0;
+        
     }
     else //display info
     {   
@@ -89,6 +92,63 @@ void total_info_helper(PCB* pcb){
         printf("The state of PCB is %d\n", pcb->state);
     }
 }
+
+//Process cmd from the terminal
+void displayMenu() {
+    printf("\nSimulation Menu:\n");
+    printf("C: Create a process\n");
+    printf("F: Fork a process\n");
+    printf("K: Kill a process\n");
+    printf("E: Exit the simulation\n");
+    printf("Q: Quantum the simulation\n");
+    printf("S: Send message to Process pid\n");
+    printf("R: Receive message\n");
+    printf("Y: Reply message to Process pid\n");
+    printf("N: Create new SEM\n");
+    printf("P: Operate sem P operation\n");
+    printf("V: Operate sem V operation\n");
+    printf("I: Print process info\n");
+    printf("T: Print all info\n");
+ 
+}
+
+// Function to process the user command
+//first arg
+void processCommand(char command, int param1, int para2 ) {
+    switch (command) {
+        case 'C':
+            printf("Creating a new process...\n");
+            // Add code to create a process here
+            if (createProcess(param1)){
+                printf("Error: cannot create Process\n");
+            }
+            break;
+        case 'F':
+            printf("Forking a process...\n");
+            // Add code to fork a process here
+            if (forkProcess()){
+                printf("Error: cannot fork Process\n");
+            }
+            break;
+        case 'K':
+            printf("Killing a process...\n");
+            // Add code to kill a process here
+            if (kill(param1)){
+                printf("Error: cannot kill Process PID %d\n", param1);
+            }
+            break;
+        case 'E':
+            // No action needed here, handled in main loop
+            printf("Exit the stimulation\n");
+            exit();
+            break;
+        default:
+            printf("Invalid command! Please enter a valid command.\n");
+            break;
+    }
+}
+
+
 // Functions
 
 int createProcess(int priority)
@@ -245,7 +305,7 @@ void exit()
     runningP = next_runningP;
     total_info_helper(runningP); // print info of next running P
 
-    return true;
+    // return true;
 };
 
 int quantum();
@@ -265,46 +325,75 @@ int send(int pid, char *msg)
     strncpy(new_msg->msg, msg, MAX_MSG_LENGTH);
     new_msg->msg[MAX_MSG_LENGTH] = '\0';
 
-    // find pid , append msg to messages
+    // find pid of receiverP
+    Node* nodeReceiver;
     PCB *PCBReceiver;
     if (List_search(lowPriority, pComparator, &pid) != NULL)
     {
-        PCBReceiver = List_curr(lowPriority);
-        if (List_append(PCBReceiver->proc_message, new_msg) == -1)
-        {
-            printf("Error: Failed to append message to list\n");
-            free(new_msg); // Free the allocated memory
-            return 0;
-        }
+        nodeReceiver = List_curr(lowPriority);
+        
     }
     else if (List_search(mediumPriority, pComparator, &pid) != NULL)
     {
-        PCBReceiver = List_curr(mediumPriority);
-        if (List_append(PCBReceiver->proc_message, new_msg) == -1)
-        {
-            printf("Error: Failed to append message to list\n");
-            free(new_msg); // Free the allocated memory
-            return 0;
-        }
+        nodeReceiver = List_curr(mediumPriority);
+        
     }
     else if (List_search(highPriority, pComparator, &pid) != NULL)
     {
-        PCBReceiver = List_curr(highPriority);
-        if (List_append(PCBReceiver->proc_message, new_msg) == -1)
-        {
-            printf("Error: Failed to append message to list\n");
-            free(new_msg); // Free the allocated memory
-            return 0;
-        }
+        nodeReceiver = List_curr(highPriority);
     }
     else
     {
         printf("Error: Process with PID %d does not exist\n", pid);
         return false;
     }
-    // block P , wait until get reply
-    printf("Success send Process with PID %d \n", pid);
+
+    //append message to receiverP
+    PCBReceiver =nodeReceiver->pItem;
+    if (List_append(PCBReceiver->proc_message, new_msg) == -1)
+    {
+        printf("Error: Failed to append message to list\n");
+        free(new_msg); // Free the allocated memory
+        return 0;
+    }
+
+    //remove sender from ready Q
+    int sender_priority = runningP->priority;
+    Node *senderNode;
+    switch (sender_priority)
+    {
+    case 0:
+        senderNode = List_remove(lowPriority);
+        if (senderNode == NULL){
+            printf("Error: removing senderNode from ready Queue");
+            return 0;
+        }
+        break;
+    case 1:
+        senderNode = List_remove(mediumPriority);
+        if (senderNode == NULL){
+            printf("Error: removing senderNode from ready Queue");
+            return 0;
+        }
+        break;
+    case 2:
+        senderNode = List_remove(highPriority);
+        if (senderNode == NULL){
+            printf("Error: removing senderNode from ready Queue");
+            return 0;
+        }
+        break;
+    
+    default:
+        printf("Error: inappropriate sender_priority");
+        return 0;
+        break;
+    }
+    //append to the waitForReplyQueue
+    List_append(waitForReplyQueue, senderNode);
+    // block P 
     runningP->state = BLOCKED;
+
     return 1;
 };
 
@@ -312,12 +401,85 @@ int receive()
 {
     // block P
     runningP->state = BLOCKED;
+    //remove from ready Queue
+    int receiver_priority = runningP->priority;
+    Node *receiveNode;
+    switch (receiver_priority)
+    {
+    case 0:
+        receiveNode = List_remove(lowPriority);
+        if (receiveNode == NULL){
+            printf("Error: removing receiveNode from ready Queue");
+            return 0;
+        }
+        break;
+    case 1:
+        receiveNode = List_remove(mediumPriority);
+        if (receiveNode == NULL){
+            printf("Error: removing receiveNode from ready Queue");
+            return 0;
+        }
+        break;
+    case 2:
+        receiveNode = List_remove(highPriority);
+        if (receiveNode == NULL){
+            printf("Error: removing receiveNode from ready Queue");
+            return 0;
+        }
+        break;
+    
+    default:
+        printf("Error: inappropriate sender_priority");
+        return 0;
+        break;
+    }
+    //add to waitForReceiveQueue
+    List_append(waitForReceiveQueue, receiveNode);
+
     // dequeye message from list of messages, check if has message or not
     message* receive_msg;
-    receive_msg = List_trim(runningP->proc_message);
+    PCB* receivePCB = receiveNode->pItem;
+
+    receive_msg = List_trim(receivePCB->proc_message);
     if (receive_msg == NULL){
         printf("Error: cannot get the receive msg");
         return 0;
+    }
+    else{
+        //remove from waitForReceiveQueue
+        receiveNode = List_remove(waitForReceiveQueue);
+        receivePCB = receiveNode->pItem;
+        //append to the appropriate queue
+        int receive_priority = receivePCB->priority;
+        switch (receive_priority)
+        {
+        case 0:
+            if (List_append(lowPriority, receiveNode))
+            {
+                printf("Error: cannot append to readyQ\n");
+                return 0;
+            };
+            break;
+        case 1:
+            if (List_append(mediumPriority, receiveNode))
+            {
+                printf("Error: cannot append to readyQ\n");
+                return 0;
+            };
+            break;
+        case 2:
+            if (List_append(highPriority, receiveNode))
+            {
+                printf("Error: cannot append to readyQ\n");
+                return 0;
+            };
+            break;
+        
+        default:
+            printf("Error: inappropriate receive_priority");
+            return 0;
+            break;
+        }
     }
 
     // get sender id
@@ -331,7 +493,7 @@ int receive()
         return 0;
     }
     // unblock P
-    runningP->state = READY;
+    receivePCB->state = READY;
     return 1;
 
 };
@@ -482,6 +644,22 @@ void total_info(void){
         node_ptr = node_ptr->pNext;
     };
 
+    node_ptr = List_first(waitForReceiveQueue);
+    PCB* PCB_ptr = node_ptr->pItem;
+    while (node_ptr->pNext != NULL){
+        PCB* PCB_ptr = node_ptr->pItem;
+        total_info_helper(PCB_ptr);
+        node_ptr = node_ptr->pNext;
+    };
+
+    node_ptr = List_first(waitForReplyQueue);
+    PCB* PCB_ptr = node_ptr->pItem;
+    while (node_ptr->pNext != NULL){
+        PCB* PCB_ptr = node_ptr->pItem;
+        total_info_helper(PCB_ptr);
+        node_ptr = node_ptr->pNext;
+    };
+
 }
 
 void Init(){
@@ -517,7 +695,7 @@ void Init(){
     for (int i =0; i<5; i++){
         //allocate memory space for each semaphore
         sem * sem_allocate = (sem *) malloc(sizeof(sem));
-        if (readyQ == NULL){
+        if (sem_allocate == NULL){
         printf("Error: cannot allocate memory for sem\n");
         };
 
@@ -526,10 +704,20 @@ void Init(){
         sem_allocate->pList= NULL;
     };
 
-    initP = (PCB*) malloc(sizeof(PCB));
-    if (initP == NULL){
-        printf("Error: cannot allocate memory for initP\n");
-    };
+    // initP = (PCB*) malloc(sizeof(PCB));
+    // if (initP == NULL){
+    //     printf("Error: cannot allocate memory for initP\n");
+    // };
 
 };
+
+int main(char argc, char* argv[]){
+    displayMenu();
+    char p1 = (argv[0]);
+    int p2 = atoi(argv[1]);
+    int p3 = atoi(argv[2]);
+    printf("argument receive are: %c, %d, %d");
+    processCommand(p1, p2, p3);
+
+}
 
