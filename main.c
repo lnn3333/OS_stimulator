@@ -1,8 +1,5 @@
 #include "main.h"
 
-runningP = NULL;
-initP = NULL;
-
 
 // Define helper function to find an available PID
 int findPID()
@@ -11,34 +8,88 @@ int findPID()
     return availablePID++;
 };
 
-//comparator function
-bool pComparator(void *pItem, void *pComparisonArg){
+// comparator function
+bool pComparator(void *pItem, void *pComparisonArg)
+{
     const PCB *PCB_pItem = (PCB *)pItem;
     const int *int_pComparisonArg = (int *)pComparisonArg;
 
     return (PCB_pItem->pid == *int_pComparisonArg);
 };
 
-//Search and Kill function
-bool searchAndKill (List *PCBlist, int pidSearch){
-    PCB *pSearch = List_search(PCBlist,pComparator, pidSearch);
-    if (pSearch == NULL){
+// Search and Kill function
+bool searchAndKill(List *PCBlist, int pidSearch)
+{
+    PCB *pSearch = List_search(PCBlist, pComparator, pidSearch);
+    if (pSearch == NULL)
+    {
         fprintf(stderr, "Error: PID %d does not exist\n", pidSearch);
         return false;
     }
-    else{
-        if (!List_remove(PCBlist)) {
+    else
+    {
+        if (!List_remove(PCBlist))
+        {
             fprintf(stderr, "Error: Couldn't remove process from the queue\n");
             return false;
-        } else {
+        }
+        else
+        {
             printf("Success: Removed process with PID %d from the queue\n", pidSearch);
             return true;
         }
     }
 }
 
-// Functions
+// search the PCB base on pid and return the pointer to the PCB; return NULL if not found
+PCB* findPCB(int pid){
+    PCB *PCBSender = NULL;
 
+    //find sender ID, unblock sender
+     if (List_search(lowPriority, pComparator, &pid) != NULL)
+    {
+        PCBSender = List_curr(lowPriority);
+        
+    }
+    else if (List_search(mediumPriority, pComparator, &pid) != NULL)
+    {
+        PCBSender = List_curr(mediumPriority);
+    }
+    else if (List_search(highPriority, pComparator, &pid) != NULL)
+    {
+       PCBSender = List_curr(highPriority);
+    }
+    else
+    {
+        printf("Error: SenderID with PID %d does not exist\n", pid);
+        return NULL;
+    }
+
+    //error handle
+    if (PCBSender == NULL)
+    {
+        printf("Error: cannot locate the sender\n");
+        return 0;
+    }
+
+    return PCBSender;
+}
+
+//display info of the PCB
+void total_info_helper(PCB* pcb){
+
+    if( pcb == NULL){
+        printf("Error: cannot get the Sender PCB\n");
+        return 0;
+    }
+    else //display info
+    {   
+        printf("The pid of PCB is %d\n", pcb->pid);
+        printf("The priority of PCB is %d\n", pcb->priority);
+        printf("The state of PCB is %d\n", pcb->state);
+    }
+}
+// Functions
 
 int createProcess(int priority)
 {
@@ -55,9 +106,9 @@ int createProcess(int priority)
     newPCB->pid = findPID();
     newPCB->priority = priority;
     newPCB->state = READY;
-    newPCB->messages = List_create();
-    
-    if(newPCB->messages==NULL)
+    newPCB->proc_message = List_create();
+
+    if (newPCB->proc_message == NULL)
     {
         printf("Error create messages list\n");
         return 0;
@@ -85,17 +136,17 @@ int createProcess(int priority)
     return newPCB->pid;
 };
 
-
 bool forkProcess()
 {
     // check if Process is init
-    if (runningP == initP){
+    if (runningP == initP)
+    {
         printf("Error: Cannot fork initP");
         return false;
     }
 
-    //copy the runningP, add to readyQ
-    PCB* runningPCopy = (PCB*)(malloc(sizeof(PCB)));
+    // copy the runningP, add to ready queue
+    PCB *runningPCopy = (PCB *)(malloc(sizeof(PCB)));
     if (runningPCopy == NULL)
     {
         printf("Error create Process\n");
@@ -103,148 +154,217 @@ bool forkProcess()
     }
     memcpy(runningPCopy, runningPCopy, sizeof(PCB));
     runningPCopy->pid = findPID();
-    List_append(readyQ, runningPCopy);
-
-    printf("Process forked with PID: %d\n", runningPCopy->pid);
-    return true;
-
-
-};
-
-
-bool kill(int pid){
-    //search for pid in readyQ
-    int pPriority = -1;
-    if(List_search(readyQ,pComparator,pid) != NULL){
-        PCB* pSearch = (PCB*) List_search(readyQ,pComparator,pid);
-        searchAndKill(readyQ, pid);
-        pPriority = pSearch->pid;
-        
-    };
-    searchAndKill(readyQ,pid);
-    if(pPriority!= -1){
-        switch (pPriority)
+    
+    switch (runningPCopy->priority)
         {
-        case 0:
-            searchAndKill(lowPriority, pid);
+        case (0):
+            List_append(lowPriority, runningPCopy);
             break;
-        case 1:
-            searchAndKill(mediumPriority, pid);
+        case (1):
+            List_append(mediumPriority, runningPCopy);
             break;
-        case 2:
-            searchAndKill(highPriority, pid);
+        case (2):
+            List_append(highPriority, runningPCopy);
             break;
-        
+
         default:
+            printf("Error appending process to queue");
             break;
         }
-    }
-    else{
-        // Search and remove from priority queues only
-        if (List_search(lowPriority, pComparator, &pid) != NULL) {
-            pPriority = 0;
-            searchAndKill(lowPriority, pid);
-        } else if (List_search(mediumPriority, pComparator, &pid) != NULL) {
-            pPriority = 1;
-            searchAndKill(mediumPriority, pid);
-        } else if (List_search(highPriority, pComparator, &pid) != NULL) {
-            pPriority = 2;
-            searchAndKill(highPriority, pid);
-        } else {
-            printf("Error: Process with PID %d does not exist\n", pid);
-            return false;
-        }
-    }
+        printf("Process forked with PID: %d\n", runningPCopy->pid);
     return true;
 };
 
-void exit(){
-    // check if Process is init
-    if (runningP == initP){
-        printf("Error: Cannot kill initP");
+bool kill(int pid)
+{
+    // Search and remove from priority queues only
+    if (List_search(lowPriority, pComparator, &pid) != NULL)
+    {
+        if(searchAndKill(lowPriority, pid)){
+            printf("Error: cannot kill PID %d\n", pid);
+        };
+    }
+    else if (List_search(mediumPriority, pComparator, &pid) != NULL)
+    {
+         if(searchAndKill(mediumPriority, pid)){
+            printf("Error: cannot kill PID %d\n", pid);
+        };
+    }
+    else if (List_search(lowPriority, pComparator, &pid) != NULL)
+    {
+         if(searchAndKill(lowPriority, pid)){
+            printf("Error: cannot kill PID %d\n", pid);
+        };
+    }
+    else if (List_search(waitForReceiveQueue, pComparator, &pid) != NULL)
+    {
+         if(searchAndKill(waitForReceiveQueue, pid)){
+            printf("Error: cannot kill PID %d\n", pid);
+        };
+    }
+    else if (List_search(waitForReplyQueue, pComparator, &pid) != NULL)
+    {
+         if(searchAndKill(waitForReplyQueue, pid)){
+            printf("Error: cannot kill PID %d\n", pid);
+        };
+    }
+    else
+    {
+        printf("Error: Process with PID %d does not exist\n", pid);
         return false;
     }
-    //find P in readyQ
-    int runningPid = runningP->pid;
-    if(runningPid < 0){
-        printf("Error: Cannot get PID of the running process\n");
-        return false;
-    }
-    //Search and Kill running P
-    searchAndKill(readyQ, runningPid);
     
     return true;
-
 };
 
+void exit()
+{
+    //check if all the ready queues are empy
+    //If yes, kill the init P
+    if(List_count(highPriority)==0 && List_count(mediumPriority)==0 && List_count(lowPriority)==0){
+        //kill the init P
+        //return ;
+    }
+    else{
+        if(kill(runningP->pid)){
+            printf("Error: cannot kill the running PID %d\n", runningP->pid);
+            return ;
+        } 
+        else{
+            printf("Success exit\n");
+        }
+    }
+
+    //get the next running P
+    Node *next_runningP_node = Listfirst(highPriority);
+    if (next_runningP_node == NULL){
+        printf("Error: cannot get the next running P\n");
+        return false;
+    }
+    PCB* next_runningP = next_runningP_node->pItem;
+    runningP = next_runningP;
+    total_info_helper(runningP); // print info of next running P
+
+    return true;
+};
 
 int quantum();
 
-
-int send(int pid, char *msg){
-    //add msg to list messages
+int send(int pid, char *msg)
+{
+    // add msg to list messages
     message *new_msg = (message *)malloc(sizeof(message));
-    if (new_msg == NULL) {
+    if (new_msg == NULL)
+    {
         printf("Error: Memory allocation failed for message\n");
         return false;
     }
 
-    //populate new_msg
-    new_msg->pid = pid;
+    // populate new_msg
+    new_msg->senderPid = runningP->pid;
     strncpy(new_msg->msg, msg, MAX_MSG_LENGTH);
-    new_msg->msg[MAX_MSG_LENGTH]='\0';
+    new_msg->msg[MAX_MSG_LENGTH] = '\0';
 
-    //find pid , append msg to messages
-    PCB *PCBReceiver; 
-    if (List_search(lowPriority, pComparator, &pid) != NULL) {
+    // find pid , append msg to messages
+    PCB *PCBReceiver;
+    if (List_search(lowPriority, pComparator, &pid) != NULL)
+    {
         PCBReceiver = List_curr(lowPriority);
-        if(List_append(PCBReceiver->messages, new_msg)==-1){
+        if (List_append(PCBReceiver->proc_message, new_msg) == -1)
+        {
             printf("Error: Failed to append message to list\n");
             free(new_msg); // Free the allocated memory
             return 0;
-        }        
-    } else if (List_search(mediumPriority, pComparator, &pid) != NULL) {
+        }
+    }
+    else if (List_search(mediumPriority, pComparator, &pid) != NULL)
+    {
         PCBReceiver = List_curr(mediumPriority);
-        if(List_append(PCBReceiver->messages, new_msg)==-1){
+        if (List_append(PCBReceiver->proc_message, new_msg) == -1)
+        {
             printf("Error: Failed to append message to list\n");
             free(new_msg); // Free the allocated memory
             return 0;
         }
-        
-    } else if (List_search(highPriority, pComparator, &pid) != NULL) {
+    }
+    else if (List_search(highPriority, pComparator, &pid) != NULL)
+    {
         PCBReceiver = List_curr(highPriority);
-        if(List_append(PCBReceiver->messages, new_msg)==-1){
+        if (List_append(PCBReceiver->proc_message, new_msg) == -1)
+        {
             printf("Error: Failed to append message to list\n");
             free(new_msg); // Free the allocated memory
             return 0;
         }
-    } else {
+    }
+    else
+    {
         printf("Error: Process with PID %d does not exist\n", pid);
         return false;
     }
-    //block P , wait until get reply
+    // block P , wait until get reply
     printf("Success send Process with PID %d \n", pid);
     runningP->state = BLOCKED;
+    return 1;
+};
+
+int receive()
+{
+    // block P
+    runningP->state = BLOCKED;
+    // dequeye message from list of messages, check if has message or not
+    message* receive_msg;
+    receive_msg = List_trim(runningP->proc_message);
+    if (receive_msg == NULL){
+        printf("Error: cannot get the receive msg");
+        return 0;
+    }
+
+    // get sender id
+    int senderID = receive_msg->senderPid;
+
+    // reply to sender
+    char *reply_msg = "Reply message\n";
+    int resultReply = reply(senderID, reply_msg);
+    if(resultReply == 0){
+        printf("Error: cannot reply to sender with pid %d \n", senderID);
+        return 0;
+    }
+    // unblock P
+    runningP->state = READY;
     return 1;
 
 };
 
+int reply(int pid, char *msg){
+    
+    printf("%s\n", msg);
+    PCB *getPCBSender = NULL;
+    getPCBSender = findPCB(pid);
 
-int receive(){
+    if( getPCBSender == NULL){
+        printf("Error: cannot get the Sender PCB\n");
+        return 0;
+    }
+    else
+    {
+        getPCBSender->state = READY;
+    }
+    return 1;
 
-};
+}; 
 
-int reply(int pid, char *msg); // null terminate string, MAX lenght of msg = 40 char
-
-
-int new_sem(int semID, int value){
-    if(value < 0 || value > 4){
+int new_sem(int semID, int value)
+{
+    if (value < 0 || value > 4)
+    {
         printf("Error: value is not in range");
         return 0;
     }
 
-    sem * newSem = (sem *) malloc(sizeof(sem));
-    if (newSem == NULL){
+    sem *newSem = (sem *)malloc(sizeof(sem));
+    if (newSem == NULL)
+    {
         printf("Error: failure create SEM");
         return 0;
     }
@@ -252,29 +372,33 @@ int new_sem(int semID, int value){
     newSem->semID = semID;
     newSem->value = value;
     newSem->pList = List_create();
-    if (newSem->pList == NULL){
+    if (newSem->pList == NULL)
+    {
         printf("Error: failure create Process List for SEM");
-        free(newSem); 
+        free(newSem);
         return 0;
     }
 
     return 1;
 };
 
+int P(int semID)
+{
 
-int P(int semID){
-
-    if (semID < 0 || semID > 4) {
+    if (semID < 0 || semID > 4)
+    {
         printf("Error: Semaphore ID out of range\n");
         return 0;
     }
-    sem* getSem;
+    sem *getSem;
     getSem = &semList[semID];
-    getSem->value -- ;
-     // If semaphore value is negative, block the process
-    if (getSem->value < 0) {
+    getSem->value--;
+    // If semaphore value is negative, block the process
+    if (getSem->value < 0)
+    {
         // Block the process by adding it to the semaphore's process list
-        if (!List_append(getSem->pList, runningP)) {
+        if (!List_append(getSem->pList, runningP))
+        {
             printf("Error: Failed to add process to semaphore's process list\n");
             return false;
         }
@@ -284,34 +408,128 @@ int P(int semID){
     }
     return true;
 
-
-
 }; //(semID range 0-4)
 
-
-int V(int semID){
-     if (semID < 0 || semID > 4) {
+int V(int semID)
+{
+    if (semID < 0 || semID > 4)
+    {
         printf("Error: Semaphore ID out of range\n");
         return 0;
     }
-    sem* getSem;
+    sem *getSem;
     getSem = &semList[semID];
-    getSem->value ++;
-    if (getSem->value <= 0) {
-            // Check if there are processes waiting on the semaphore
-            if (List_count(getSem->pList) > 0) {
-                // Get the first process waiting on the semaphore
-                PCB *waitingProcess = (PCB *)List_remove(getSem->pList);
+    getSem->value++;
+    if (getSem->value <= 0)
+    {
+        // Check if there are processes waiting on the semaphore
+        if (List_count(getSem->pList) > 0)
+        {
+            // Get the first process waiting on the semaphore
+            PCB *waitingProcess = (PCB *)List_remove(getSem->pList);
 
-                resume(waitingProcess);
-            }
+            resume(waitingProcess);
         }
+    }
 
-        return 1; // Operation succeeded
+    return 1; // Operation succeeded
 }
 
+void proc_info(int pid){
+    
+    PCB *getPCBSender = NULL;
+    getPCBSender = findPCB(pid);
 
-void proc_info(int pid);
+    if( getPCBSender == NULL){
+        printf("Error: cannot get the Sender PCB\n");
+        return 0;
+    }
+    else 
+    {
+        printf("The pid of PCB is %d\n", getPCBSender->pid);
+        printf("The priority of PCB is %d\n", getPCBSender->priority);
+        printf("The state of PCB is %d\n", getPCBSender->state);
+    }
+    return 1;
+    
+};
 
+void total_info(void){
+    //loop through all queues
+    //call procinfo
 
-void total_info(void);
+    Node* node_ptr = List_first(lowPriority);
+    
+    while (node_ptr->pNext != NULL){
+        PCB* PCB_ptr = node_ptr->pItem;
+        total_info_helper(PCB_ptr);
+        node_ptr = node_ptr->pNext;
+    };
+
+    node_ptr = List_first(mediumPriority);
+    PCB* PCB_ptr = node_ptr->pItem;
+    while (node_ptr->pNext != NULL){
+        PCB* PCB_ptr = node_ptr->pItem;
+        total_info_helper(PCB_ptr);
+        node_ptr = node_ptr->pNext;
+    };
+
+    node_ptr = List_first(highPriority);
+    PCB* PCB_ptr = node_ptr->pItem;
+    while (node_ptr->pNext != NULL){
+        PCB* PCB_ptr = node_ptr->pItem;
+        total_info_helper(PCB_ptr);
+        node_ptr = node_ptr->pNext;
+    };
+
+}
+
+void Init(){
+
+    //initialis priority queues
+    highPriority = List_create();
+    if (highPriority == NULL){
+        printf("Error: cannot create highPriority\n");
+    }
+
+    mediumPriority = List_create();
+    if (mediumPriority == NULL){
+        printf("Error: cannot create mediumPriority\n");
+    }
+
+    lowPriority = List_create();
+    if (lowPriority == NULL){
+        printf("Error: cannot create lowPriority\n");
+    }
+
+    // Queue wait for receive msg
+    waitForReceiveQueue = List_create();
+    if (waitForReceiveQueue == NULL){
+        printf("Error: cannot create waitForReceiveQueue\n");
+    };
+    // Queue wait for reply msg
+    waitForReplyQueue = List_create();
+    if (waitForReplyQueue == NULL){
+        printf("Error: cannot create waitForReplyQueue\n");
+    };
+
+    //init semList
+    for (int i =0; i<5; i++){
+        //allocate memory space for each semaphore
+        sem * sem_allocate = (sem *) malloc(sizeof(sem));
+        if (readyQ == NULL){
+        printf("Error: cannot allocate memory for sem\n");
+        };
+
+        sem_allocate->value= 0;
+        sem_allocate->semID= -1;
+        sem_allocate->pList= NULL;
+    };
+
+    initP = (PCB*) malloc(sizeof(PCB));
+    if (initP == NULL){
+        printf("Error: cannot allocate memory for initP\n");
+    };
+
+};
+

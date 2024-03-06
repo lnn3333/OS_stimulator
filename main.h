@@ -22,8 +22,8 @@ struct PCB_s
 {
     int pid;
     int priority;
-    processState state;
-    List* messages;
+    enum processState state;
+    List *proc_message;
 };
 
 // Semaphore data structure
@@ -38,8 +38,9 @@ struct sem_S
 
 // Define a structure to represent a message
 typedef struct message_S message;
-struct message_S {
-    int pid;
+struct message_S
+{
+    int senderPid;
     char msg[MAX_MSG_LENGTH + 1]; // +1 for null terminator
 };
 
@@ -48,16 +49,14 @@ List *highPriority;
 List *mediumPriority;
 List *lowPriority;
 
-// Queue wait for send msg
-List *jobQ;
-
-// Queue wait for receive msg
-List *readyQ;
+//Block queues: wait for receive msg,  wait for reply msg
+List *waitForReceiveQueue;
+List *waitForReplyQueue;
 
 PCB *runningP;
 PCB *initP;
 sem semList[5];
-List *messages;
+
 // Functions
 // Create| C: create a P, add to ready Q
 // Report Success or Failure, pid of created P
@@ -111,3 +110,6 @@ void proc_info(int pid);
 // Totalinfo |T: display all process queues and their content
 // Report see action
 void total_info(void);
+
+//init Proccess
+void Init();
