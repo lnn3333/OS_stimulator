@@ -50,8 +50,12 @@ bool searchAndKill(List *PCBlist, int pidSearch)
 // search the PCB base on pid and return the pointer to the PCB; return NULL if not found
 PCB *findPCB(int pid)
 {
+    printf("here");
     PCB *PCBSender;
+    
     void *ptr_pid = &pid;
+    
+    
     // find sender ID, unblock sender
     if (List_search(lowPriority, pComparator, ptr_pid) != NULL)
     {
@@ -59,6 +63,7 @@ PCB *findPCB(int pid)
     }
     else if (List_search(mediumPriority, pComparator, ptr_pid) != NULL)
     {
+        printf("here");
         PCBSender = List_curr(mediumPriority);
     }
     else if (List_search(highPriority, pComparator, ptr_pid) != NULL)
@@ -75,11 +80,12 @@ PCB *findPCB(int pid)
     if (PCBSender == NULL)
     {
         printf("Error: cannot locate the sender\n");
-        return 0;
+        return NULL; // Corrected to return NULL instead of 0
     }
 
     return PCBSender;
 }
+
 
 // display info of the PCB
 void total_info_helper(PCB *pcb)
@@ -175,8 +181,45 @@ int createProcess(int priority){
         return 0;
     }
     
-    printf("Sucess create PCB \n");
-    proc_info(newPCB->pid);
+    printf("Sucess create PCB %d \n", newPCB->pid);
+    printf("priority is %d\n", priority);
+   //add to ready Q
+    switch (priority)
+    {
+    case 0:
+        printf("here");
+        if (List_append(lowPriority,newPCB)){
+            printf("Error cant add to ready Q\n");
+        }
+        printf("Sucess adding to lowpriority\n");
+        break;
+    case 1:
+         printf("herenjjjjj");
+        if (List_append(mediumPriority,newPCB)){
+            printf("Error cant add to ready Q");
+        }
+        printf("Sucess adding to mediumpriority\n");
+        break;
+    case 2:
+        if (List_append(highPriority,newPCB)){
+            printf("Error cant add to ready Q");
+        }
+        printf("Sucess adding to highpriority\n");
+        break;
+    
+    default:
+        printf("Invalid priority number\n");
+        return 0;
+        break;
+    } 
+     
+ 
+    
+    int newPCB_pid = newPCB->pid;
+    printf("newPCB_pid is %d\n", newPCB_pid);
+   // proc_info(newPCB_pid); 
+        printf("The priority of PCB is %d\n", newPCB->priority);
+        printf("The state of PCB is %d\n", newPCB->state);
     return newPCB->pid;
 
 }
@@ -197,7 +240,7 @@ bool forkProcess()
         printf("Error create Process\n");
         return false;
     }
-    memcpy(runningPCopy, runningPCopy, sizeof(PCB));
+    memcpy(runningPCopy, runningP, sizeof(PCB));
     runningPCopy->pid = findPID();
 
     switch (runningPCopy->priority)
@@ -611,9 +654,10 @@ int V(int semID)
 
 void proc_info(int pid)
 {
+    printf("here");
+    PCB *getPCBSender;
+    getPCBSender = findPCB(pid);
 
-    PCB *getPCBSender = findPCB(pid);
-printf("here");
     if (getPCBSender == NULL)
     {
         printf("Error: cannot get the Sender PCB\n");
@@ -740,7 +784,7 @@ int main(int argc, char *argv[]) {
         return 1; // indicate error
     }
 
-    displayMenu();
+   // displayMenu();
 
     char *command = argv[1]; // Corrected to start from argv[1]
     int p2 = (argc > 2) ? atoi(argv[2]) : 0;
