@@ -33,7 +33,7 @@ struct sem_S
 {
     int semID;
     int value;
-    PCB *pList;
+    List *pList;
 };
 
 // Define a structure to represent a message
@@ -49,7 +49,7 @@ List *highPriority;
 List *mediumPriority;
 List *lowPriority;
 
-//Block queues: wait for receive msg,  wait for reply msg
+// Block queues: wait for receive msg,  wait for reply msg
 List *waitForReceiveQueue;
 List *waitForReplyQueue;
 
@@ -73,7 +73,7 @@ bool kill(int pid);
 
 // Exit| E: kill current running P
 //  Reports P scheduling info, which P now get control of CPU
-void exit();
+void exitProcess();
 
 // Quantum| Q: time quantum of running P expire
 // Report action taken (eg. process scheduling information)
@@ -111,5 +111,5 @@ void proc_info(int pid);
 // Report see action
 void total_info(void);
 
-//init Proccess
+// init Proccess
 void Init();
