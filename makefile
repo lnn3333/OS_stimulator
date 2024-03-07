@@ -1,18 +1,21 @@
-FLAGS = -Wall -g -std=c99 -D_POSIX_C_SOURCE=200809L -Werror
+FLAGS = -Wall -g -std=c99 -D _POSIX_C_SOURCE=200809L -Werror
 
 all: build
 
-build: main.o
-	gcc $(FLAGS) main.c list.o -o main 
+build: main.o list.o
+	gcc $(FLAGS) main.o list.o -o sim
+
+main.o: main.c
+	gcc $(FLAGS) -c main.c
+
+list.o: list.c
+	gcc $(FLAGS) -c list.c
 
 run: build
-	./main
+	./sim
 
 valgrind: build
-	valgrind --leak-check=full ./main
+	valgrind --leak-check=full ./sim
 
-clean: 
-	rm -f main
-
-debug: 
-	gdb main
+clean:
+	rm -f sim *.o

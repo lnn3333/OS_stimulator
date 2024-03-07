@@ -1,8 +1,14 @@
+#ifndef _MAIN_H_
+#define _MAIN_H_
+
+
 #include <stdio.h>
 #include <ctype.h>
 #include "list.h"
 #include <stdbool.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 // Define constants for semaphore IDs
 #define SEMAPHORE_NUMBER 5
 #define MAX_MSG_LENGTH 40
@@ -45,17 +51,17 @@ struct message_S
 };
 
 // Ready Q based on priority (high 2, medium 1, low 0)
-List *highPriority;
-List *mediumPriority;
-List *lowPriority;
+extern List *highPriority;
+extern List *mediumPriority;
+extern List *lowPriority;
 
 // Block queues: wait for receive msg,  wait for reply msg
-List *waitForReceiveQueue;
-List *waitForReplyQueue;
+extern List *waitForReceiveQueue;
+extern List *waitForReplyQueue;
 
-PCB *runningP;
-PCB *initP;
-sem semList[5];
+extern PCB *runningP;
+extern PCB *initP;
+extern sem semList[5];
 
 // Functions
 // Create| C: create a P, add to ready Q
@@ -113,3 +119,6 @@ void total_info(void);
 
 // init Proccess
 void Init();
+
+
+#endif // _MAIN_H_

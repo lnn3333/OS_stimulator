@@ -131,6 +131,7 @@ void *List_trim(List *pList);
 // If the current pointer is before the start of the pList, then start searching from
 // the first node in the list (if any).
 typedef bool (*COMPARATOR_FN)(void *pItem, void *pComparisonArg);
+bool pComparator(void *pItem, void *pComparisonArg);
 void *List_search(List *pList, COMPARATOR_FN pComparator, void *pComparisonArg);
 
 #endif

@@ -1,7 +1,14 @@
 #include "main.h"
-#include <stdlib.h>
-#include <string.h>
 
+// Define the variables
+List *highPriority = NULL;
+List *mediumPriority = NULL;
+List *lowPriority = NULL;
+List *waitForReceiveQueue = NULL;
+List *waitForReplyQueue = NULL;
+PCB *runningP = NULL;
+PCB *initP = NULL;
+sem semList[5];  // Assuming semList is an array of semaphores
 // Define helper function to find an available PID
 int findPID()
 {
@@ -9,17 +16,7 @@ int findPID()
     return availablePID++;
 };
 
-// comparator function
-bool pComparator(void *pItem, void *pComparisonArg)
-{
-    const Node *Node_pItem = (Node *)pItem;
-    PCB *PCB_pItem = Node_pItem->pItem;
-    int PID_pItem = PCB_pItem->pid;
-    int *intptr_pComparisonArg = pComparisonArg;
-    int int_pComparisonArg = *intptr_pComparisonArg;
 
-    return (PID_pItem == int_pComparisonArg);
-};
 
 // Search and Kill function
 bool searchAndKill(List *PCBlist, int pidSearch)
@@ -50,12 +47,11 @@ bool searchAndKill(List *PCBlist, int pidSearch)
 // search the PCB base on pid and return the pointer to the PCB; return NULL if not found
 PCB *findPCB(int pid)
 {
-    printf("here");
-    PCB *PCBSender;
+
+    PCB *PCBSender = List_curr(mediumPriority);
     
-    void *ptr_pid = &pid;
-    
-    
+    void *ptr_pid = &pid; // Assuming pid is an integer variable
+
     // find sender ID, unblock sender
     if (List_search(lowPriority, pComparator, ptr_pid) != NULL)
     {
@@ -63,7 +59,6 @@ PCB *findPCB(int pid)
     }
     else if (List_search(mediumPriority, pComparator, ptr_pid) != NULL)
     {
-        printf("here");
         PCBSender = List_curr(mediumPriority);
     }
     else if (List_search(highPriority, pComparator, ptr_pid) != NULL)
@@ -157,6 +152,11 @@ void processCommand(char* command, int param1, int param2)
         printf("Exit the stimulation\n");
         exitProcess();
         break;
+    case 'T':
+        // No action needed here, handled in main loop
+        printf("Print the total info stimulation\n");
+        total_info();
+        break;
     default:
         printf("Invalid command! Please enter a valid command.\n");
         break;
@@ -181,30 +181,23 @@ int createProcess(int priority){
         return 0;
     }
     
-    printf("Sucess create PCB %d \n", newPCB->pid);
-    printf("priority is %d\n", priority);
    //add to ready Q
     switch (priority)
     {
     case 0:
-        printf("here");
-        if (List_append(lowPriority,newPCB)){
+        if (List_append(lowPriority,newPCB)==-1){
             printf("Error cant add to ready Q\n");
         }
-        printf("Sucess adding to lowpriority\n");
         break;
     case 1:
-         printf("herenjjjjj");
-        if (List_append(mediumPriority,newPCB)){
-            printf("Error cant add to ready Q");
+        if (List_append(mediumPriority,newPCB)==-1){
+            printf("Error cant add to ready Q\n");
         }
-        printf("Sucess adding to mediumpriority\n");
         break;
     case 2:
-        if (List_append(highPriority,newPCB)){
+        if (List_append(highPriority,newPCB)==-1){
             printf("Error cant add to ready Q");
         }
-        printf("Sucess adding to highpriority\n");
         break;
     
     default:
@@ -217,9 +210,7 @@ int createProcess(int priority){
     
     int newPCB_pid = newPCB->pid;
     printf("newPCB_pid is %d\n", newPCB_pid);
-   // proc_info(newPCB_pid); 
-        printf("The priority of PCB is %d\n", newPCB->priority);
-        printf("The state of PCB is %d\n", newPCB->state);
+    proc_info(newPCB_pid); 
     return newPCB->pid;
 
 }
@@ -655,8 +646,7 @@ int V(int semID)
 void proc_info(int pid)
 {
     printf("here");
-    PCB *getPCBSender;
-    getPCBSender = findPCB(pid);
+    PCB *getPCBSender = findPCB(pid);
 
     if (getPCBSender == NULL)
     {
@@ -724,8 +714,7 @@ void total_info(void)
 
 void Init()
 {
-
-    // initialis priority queues
+    // Initialis priority queues
     highPriority = List_create();
     if (highPriority == NULL)
     {
@@ -749,34 +738,43 @@ void Init()
     if (waitForReceiveQueue == NULL)
     {
         printf("Error: cannot create waitForReceiveQueue\n");
-    };
+    }
+
     // Queue wait for reply msg
     waitForReplyQueue = List_create();
     if (waitForReplyQueue == NULL)
     {
         printf("Error: cannot create waitForReplyQueue\n");
-    };
+    }
 
-    // init semList
+    // Initialize semList
     for (int i = 0; i < 5; i++)
     {
-        // allocate memory space for each semaphore
+        // Allocate memory space for each semaphore
         sem *sem_allocate = (sem *)malloc(sizeof(sem));
         if (sem_allocate == NULL)
         {
             printf("Error: cannot allocate memory for sem\n");
-        };
+            // Handle error, return or exit
+        }
 
+        // Assign unique semID values
+        sem_allocate->semID = i;
+
+        // Initialize the semaphore value to 0
         sem_allocate->value = 0;
-        sem_allocate->semID = -1;
-        sem_allocate->pList = NULL;
-    };
 
-    // initP = (PCB*) malloc(sizeof(PCB));
-    // if (initP == NULL){
-    //     printf("Error: cannot allocate memory for initP\n");
-    // };
-};
+        // Initialize the semaphore list to NULL
+        sem_allocate->pList = NULL;
+
+        // Assign the semaphore to the semList
+        semList[i] = *sem_allocate;
+    }
+
+    // Initialize initP
+   // initP = NULL; // Assuming initP is a global variable declared elsewhere
+}
+
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -791,6 +789,7 @@ int main(int argc, char *argv[]) {
     int p3 = (argc > 3) ? atoi(argv[3]) : 0;
 
     printf("Arguments received are: %s, %d, %d\n", command, p2, p3);
+    Init();
     processCommand(command, p2, p3); // Passing command, not argv[0]
 
     return 0; // indicate success
