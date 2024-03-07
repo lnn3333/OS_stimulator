@@ -1,10 +1,4 @@
-#include "list.h"
 #include "help.h"
-#include "main.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
 
 
 int findPID()
@@ -15,67 +9,31 @@ int findPID()
 
 
 
-// Search and Kill function
-bool searchAndKill(List *PCBlist, int pidSearch)
-{
-    void *pidSearch_ptr = (void *)&pidSearch;
-
-    PCB *pSearch = List_search(PCBlist, pComparator, pidSearch_ptr);
-    if (pSearch == NULL)
-    {
-        fprintf(stderr, "Error: PID %d does not exist\n", pidSearch);
-        return false;
-    }
-    else
-    {
-        if (!List_remove(PCBlist))
-        {
-            fprintf(stderr, "Error: Couldn't remove process from the queue\n");
-            return false;
-        }
-        else
-        {
-            printf("Success: Removed process with PID %d from the queue\n", pidSearch);
-            return true;
-        }
-    }
-}
-
 // search the PCB base on pid and make current item the found item; return -1 if not found; return the priority 
 Node* findPCB(int pid)
 {
+    Node *PCBSender = NULL; // Initialize to NULL to handle cases where PCB is not found
 
-    Node *PCBSender;
-    
-    void *ptr_pid = &pid; // Assuming pid is an integer variable
+    void *ptr_pid = &pid; // Pointer to the process ID
 
-    // find sender ID, unblock sender
-    if (List_search(lowPriority, pComparator, ptr_pid) != NULL)
+    // Find sender ID across different priority levels
+    if ((PCBSender = List_search(highPriority, pComparator, ptr_pid)) != NULL)
     {
-        PCBSender = List_curr(lowPriority);
+        return PCBSender;
     }
-    else if (List_search(mediumPriority, pComparator, ptr_pid) != NULL)
+    else if ((PCBSender = List_search(mediumPriority, pComparator, ptr_pid)) != NULL)
     {
-        PCBSender = List_curr(mediumPriority);
+        return PCBSender;
     }
-    else if (List_search(highPriority, pComparator, ptr_pid) != NULL)
+    else if ((PCBSender = List_search(lowPriority, pComparator, ptr_pid)) != NULL)
     {
-        PCBSender = List_curr(highPriority);
+        return PCBSender;
     }
     else
     {
-        printf("Error: SenderID with PID %d does not exist\n", pid);
-        return NULL;
+        fprintf(stderr, "Error: Sender with PID %d does not exist\n", pid);
+        return NULL; // Return NULL if PCB is not found
     }
-
-    // error handle
-    if (PCBSender == NULL)
-    {
-        printf("Error: cannot locate the sender\n");
-        return NULL; // Corrected to return NULL instead of 0
-    }
-
-    return PCBSender;
 }
 
 //allocat new message
@@ -131,43 +89,7 @@ void displayMenu()
     printf("T: Print all info\n");
 }
 
-// Function to process the user command
-// first arg
-void processCommand()
-{
-   while (1) {
-        // Get user input (command and parameters)
-        char command;
-        int priority, pid;
-        printf("Enter command and parameter (C <priority>, F, K <pid>, E): ");
-        scanf(" %c", &command);
 
-        // Process user input
-        switch (toupper(command)) {
-            case 'C': {
-                scanf("%d", &priority);
-                createProcess(priority);
-                break;
-            }
-            case 'F':
-                forkProcess();
-                break;
-            case 'K':
-                scanf("%d", &pid);
-                kill(pid);
-                break;
-            case 'E':
-                exitProcess();
-                break;
-            case 'T':
-                total_info();
-                break;
-            default:
-                printf("Invalid command.\n");
-                break;
-        }
-    }
-}
 
 PCB* allocateProcess(int priority){
     PCB *newPCB = (PCB*) malloc(sizeof(PCB));

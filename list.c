@@ -234,20 +234,24 @@ bool pComparator(void *pItem, void *pComparisonArg)
 
 
 void *List_search(List *pList, COMPARATOR_FN pComparator, void *pComparisonArg) {
-    if (List_count(pList) == 0 || pList->pFirstNode == NULL) {
+    // Check for NULL pointers
+    if (pList == NULL || pList->pFirstNode == NULL || pComparator == NULL) {
         return NULL;
     }
 
     Node *ptr_node = pList->pFirstNode;
     while (ptr_node != NULL) {
-        if (pComparator(ptr_node->pItem, pComparisonArg)) { // Compare with true
-            // Match found, update the current node and return it
+        // Use the comparison function to check for a match
+        if (pComparator(ptr_node->pItem, pComparisonArg)) {
+            // Match found, update the current node and return the item
             pList->pCurrentNode = ptr_node;
-            return ptr_node->pItem;
+            return ptr_node;
         }
         ptr_node = ptr_node->pNext;
     }
+    // No match found, set the out-of-bounds reason
     pList->lastOutOfBoundsReason = LIST_OOB_END;
+    printf("end \n");
     return NULL;
-};
+}
 

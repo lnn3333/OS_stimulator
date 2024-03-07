@@ -1,65 +1,7 @@
 #ifndef _MAIN_H_
 #define _MAIN_H_
 
-
-#include <stdio.h>
-#include <ctype.h>
-#include "list.h"
 #include "help.h"
-#include <stdbool.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-// Define constants for semaphore IDs
-#define SEMAPHORE_NUMBER 5
-#define MAX_MSG_LENGTH 40
-
-// Define state (0 : ready, 1 : running, 2 : blocked, 3 : deadlock)
-enum processState
-{
-    READY,
-    RUNNING,
-    BLOCKED,
-    DEADLOCK
-};
-
-// Process Block Control data structure
-typedef struct PCB_s PCB;
-struct PCB_s
-{
-    int pid;
-    int priority;
-    enum processState state;
-    List *proc_message;
-};
-
-// Semaphore data structure
-
-typedef struct sem_S sem;
-struct sem_S
-{
-    int semID;
-    int value;
-    List *pList;
-};
-
-// Define a structure to represent a message
-typedef struct message_S message;
-struct message_S
-{
-    int senderPid;
-    char msg[MAX_MSG_LENGTH + 1]; // +1 for null terminator
-};
-
-// Ready Q based on priority (high 2, medium 1, low 0)
-extern List *highPriority;
-extern List *mediumPriority;
-extern List *lowPriority;
-
-
-extern PCB *runningP;
-extern PCB *initP;
-extern sem semList[5];
 
 // Functions
 // Create| C: create a P, add to ready Q
@@ -115,8 +57,14 @@ void proc_info(int pid);
 // Report see action
 void total_info(void);
 
+void processCommand();
+
 // init Proccess
 void Init();
 
+// CPU scheduler using round robin for preemptive
+bool cpu_scheduler();
+// execute the Process (switch state = RUNNING )
+bool executeP(PCB *process);
 
 #endif // _MAIN_H_

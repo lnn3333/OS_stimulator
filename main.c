@@ -1,10 +1,9 @@
 #include "main.h"
 
-
 // Define the variables
-List *highPriority = NULL;
-List *mediumPriority = NULL;
 List *lowPriority = NULL;
+List *mediumPriority = NULL;
+List *highPriority = NULL;
 
 PCB *runningP = NULL;
 PCB *initP = NULL;
@@ -25,9 +24,9 @@ int createProcess(int priority)
     switch (priority)
     {
     case 0:
-        if (List_append(lowPriority, new_process) == -1)
+        if (List_append(highPriority, new_process) == -1)
         {
-            printf("Error cant add to lowPriority Q\n");
+            printf("Error cant add to highPriority Q\n");
         }
         break;
     case 1:
@@ -37,9 +36,9 @@ int createProcess(int priority)
         }
         break;
     case 2:
-        if (List_append(highPriority, new_process) == -1)
+        if (List_append(lowPriority, new_process) == -1)
         {
-            printf("Error cant add to highPriority Q");
+            printf("Error cant add to lowPriority Q");
         }
         break;
 
@@ -82,13 +81,13 @@ bool forkProcess()
     switch (runningPCopy->priority)
     {
     case (0):
-        List_append(lowPriority, runningPCopy);
+        List_append(highPriority, runningPCopy);
         break;
     case (1):
         List_append(mediumPriority, runningPCopy);
         break;
     case (2):
-        List_append(highPriority, runningPCopy);
+        List_append(lowPriority, runningPCopy);
         break;
 
     default:
@@ -117,7 +116,7 @@ bool kill(int pid)
     switch (find_pid_priority)
     {
     case 0:
-        if (List_remove(lowPriority) == NULL)
+        if (List_remove(highPriority) == NULL)
         {
             printf("Error removing from queue \n");
             return false;
@@ -131,7 +130,7 @@ bool kill(int pid)
         }
         break;
     case 2:
-        if (List_remove(highPriority) == NULL)
+        if (List_remove(lowPriority) == NULL)
         {
             printf("Error removing from queue \n");
             return false;
@@ -152,7 +151,7 @@ void exitProcess()
 {
     // check if all the ready queues are empy
     // If yes, kill the init P
-    if (List_count(highPriority) == 0 && List_count(mediumPriority) == 0 && List_count(lowPriority) == 0)
+    if (List_count(lowPriority) == 0 && List_count(mediumPriority) == 0 && List_count(highPriority) == 0)
     {
         free(initP);
         return;
@@ -171,7 +170,7 @@ void exitProcess()
     }
 
     // get the next running P
-    Node *next_runningP_node = List_first(highPriority);
+    Node *next_runningP_node = List_first(lowPriority);
     if (next_runningP_node == NULL)
     {
         printf("Error: cannot get the next running P\n");
@@ -358,22 +357,25 @@ void proc_info(int pid)
 
     if (PCB_node == NULL)
     {
-        printf("Error: cannot get the Sender Node\n");
+        printf("Error: Cannot find PCB with PID %d\n", pid);
+        return; // Exit early if PCB not found
     }
-    else
+
+    PCB *process = (PCB *)PCB_node->pItem;
+    if (process == NULL)
     {
-        PCB *process = (PCB *)PCB_node->pItem;
-        printf("The pid of PCB is %d\n", process->pid);
-        printf("The priority of PCB is %d\n", process->priority);
-        printf("The state of PCB is %d\n", process->state);
+        printf("Error: PCB pointer is NULL for PID %d\n", pid);
+        return; // Return early to avoid dereferencing NULL pointer
     }
-    return;
-};
+    printf("The pid of PCB is %d\n", process->pid);
+    printf("The priority of PCB is %d\n", process->priority);
+    printf("The state of PCB is %d\n", process->state); // Consider changing format specifier if necessary
+}
 
 void total_info(void)
 {
     // Define an array of pointers to the priority queues
-    List *priorityQueues[3] = {lowPriority, mediumPriority, highPriority};
+    List *priorityQueues[3] = {highPriority, mediumPriority, lowPriority};
 
     // Loop through each priority queue
     for (int i = 0; i < 3; i++)
@@ -382,7 +384,7 @@ void total_info(void)
         // Check if the priority queue is not empty
         if (List_count(priorityQueue) > 0)
         {
-            Node *node_ptr = List_first(priorityQueue);
+            Node *node_ptr = priorityQueue->pFirstNode;
 
             // Loop through each node in the priority queue
             while (node_ptr != NULL)
@@ -399,10 +401,10 @@ void total_info(void)
 void Init()
 {
     // Initialis priority queues
-    highPriority = List_create();
-    if (highPriority == NULL)
+    lowPriority = List_create();
+    if (lowPriority == NULL)
     {
-        printf("Error: cannot create highPriority\n");
+        printf("Error: cannot create lowPriority\n");
     }
 
     mediumPriority = List_create();
@@ -411,10 +413,10 @@ void Init()
         printf("Error: cannot create mediumPriority\n");
     }
 
-    lowPriority = List_create();
-    if (lowPriority == NULL)
+    highPriority = List_create();
+    if (highPriority == NULL)
     {
-        printf("Error: cannot create lowPriority\n");
+        printf("Error: cannot create highP\n");
     }
 
     // Initialize semList
@@ -442,14 +444,130 @@ void Init()
     }
 
     // Initialize initP
+    initP = allocateProcess(3);
+    runningP = initP;
+
     // initP = NULL; // Assuming initP is a global variable declared elsewhere
 }
+
+// Function to process the user command
+// first arg
+void processCommand()
+{
+    while (1)
+    {
+        // Get user input (command and parameters)
+        char command;
+        int priority, id, value;
+        char *msg = (char *)malloc(MAX_MSG_LENGTH * sizeof(char)); // Allocate memory for msg
+
+        // Check if memory allocation was successful
+        if (msg == NULL)
+        {
+            // Handle memory allocation failure
+            printf("Error: Unable to allocate memory for message.\n");
+            exit(EXIT_FAILURE); // Or take appropriate action
+        }
+
+        printf("Enter command and parameter (C <priority>, F, K <pid>, E, T): ");
+        scanf(" %c", &command);
+
+        // Process user input
+        switch (toupper(command))
+        {
+        case 'C':
+        {
+            scanf("%d", &priority);
+            createProcess(priority);
+            break;
+        }
+        case 'F':
+            forkProcess();
+            break;
+        case 'K':
+            scanf("%d", &id);
+            kill(id);
+            break;
+        case 'E':
+            exitProcess();
+            break;
+        case 'S':
+            scanf("%d", &id);
+            scanf("%s", msg);
+            reply(id, msg);
+            break;
+        case 'R':
+            receive();
+            break;
+        case 'Y':
+            scanf("%d", &id);
+            scanf("%s", msg);
+            reply(id, msg);
+            break;
+        case 'N':
+            scanf("%d %d", &id, &value);
+            new_sem(id, value);
+            break;
+        // case 'P':
+        //     P();
+        //     break;
+        // case 'V':
+        //     V();
+        //     break;
+        case 'T':
+            total_info();
+            break;
+        default:
+            printf("Invalid command.\n");
+            break;
+        }
+    }
+}
+
+bool executeP(PCB *process)
+{
+    process->state = RUNNING;
+    runningP = process;
+    if (runningP == NULL)
+    {
+        printf("Error executing the process \n");
+        return 0;
+    }
+
+    return 1;
+};
+
+bool cpu_scheduler(){
+   
+    PCB* resumeP = runningP;
+    if(List_append(lowPriority, resumeP)==0){
+        printf("Error adding process to low priority \n");
+        return false;
+    }
+
+    PCB* nextP = List_trim(highPriority);
+    if(executeP(nextP)==0){
+        return false;
+    }
+    return true;
+};
 
 int main(int argc, char *argv[])
 {
     Init();
-//    displayMenu();
-    processCommand();
+    //    displayMenu();
+    while(1){
+        processCommand();
+
+        //every q second call the cpuscheluer
+        if(cpu_scheduler() == 0){
+            printf("Error from cpu scheduling\n");
+            exitProcess();
+            break ; 
+        }
+    
+    
+    }
 
     return 0;
 }
