@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include "list.h"
+#include "help.h"
 #include <stdbool.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -55,9 +56,6 @@ extern List *highPriority;
 extern List *mediumPriority;
 extern List *lowPriority;
 
-// Block queues: wait for receive msg,  wait for reply msg
-extern List *waitForReceiveQueue;
-extern List *waitForReplyQueue;
 
 extern PCB *runningP;
 extern PCB *initP;

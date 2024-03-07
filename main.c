@@ -1,218 +1,63 @@
 #include "main.h"
 
+
 // Define the variables
 List *highPriority = NULL;
 List *mediumPriority = NULL;
 List *lowPriority = NULL;
-List *waitForReceiveQueue = NULL;
-List *waitForReplyQueue = NULL;
+
 PCB *runningP = NULL;
 PCB *initP = NULL;
-sem semList[5];  // Assuming semList is an array of semaphores
+sem semList[5]; // Assuming semList is an array of semaphores
 // Define helper function to find an available PID
-int findPID()
-{
-    static int availablePID = 0;
-    return availablePID++;
-};
 
-
-
-// Search and Kill function
-bool searchAndKill(List *PCBlist, int pidSearch)
-{
-    void *pidSearch_ptr = (void *)&pidSearch;
-
-    PCB *pSearch = List_search(PCBlist, pComparator, pidSearch_ptr);
-    if (pSearch == NULL)
-    {
-        fprintf(stderr, "Error: PID %d does not exist\n", pidSearch);
-        return false;
-    }
-    else
-    {
-        if (!List_remove(PCBlist))
-        {
-            fprintf(stderr, "Error: Couldn't remove process from the queue\n");
-            return false;
-        }
-        else
-        {
-            printf("Success: Removed process with PID %d from the queue\n", pidSearch);
-            return true;
-        }
-    }
-}
-
-// search the PCB base on pid and return the pointer to the PCB; return NULL if not found
-PCB *findPCB(int pid)
+int createProcess(int priority)
 {
 
-    PCB *PCBSender = List_curr(mediumPriority);
-    
-    void *ptr_pid = &pid; // Assuming pid is an integer variable
-
-    // find sender ID, unblock sender
-    if (List_search(lowPriority, pComparator, ptr_pid) != NULL)
+    PCB *new_process = allocateProcess(priority);
+    if (new_process == NULL)
     {
-        PCBSender = List_curr(lowPriority);
-    }
-    else if (List_search(mediumPriority, pComparator, ptr_pid) != NULL)
-    {
-        PCBSender = List_curr(mediumPriority);
-    }
-    else if (List_search(highPriority, pComparator, ptr_pid) != NULL)
-    {
-        PCBSender = List_curr(highPriority);
-    }
-    else
-    {
-        printf("Error: SenderID with PID %d does not exist\n", pid);
-        return NULL;
-    }
-
-    // error handle
-    if (PCBSender == NULL)
-    {
-        printf("Error: cannot locate the sender\n");
-        return NULL; // Corrected to return NULL instead of 0
-    }
-
-    return PCBSender;
-}
-
-
-// display info of the PCB
-void total_info_helper(PCB *pcb)
-{
-
-    if (pcb == NULL)
-    {
-        printf("Error: cannot get the Sender PCB\n");
-    }
-    else // display info
-    {
-        printf("The pid of PCB is %d\n", pcb->pid);
-        printf("The priority of PCB is %d\n", pcb->priority);
-        printf("The state of PCB is %d\n", pcb->state);
-    }
-}
-
-// Process cmd from the terminal
-void displayMenu()
-{
-    printf("\nSimulation Menu:\n");
-    printf("C: Create a process\n");
-    printf("F: Fork a process\n");
-    printf("K: Kill a process\n");
-    printf("E: Exit the simulation\n");
-    printf("Q: Quantum the simulation\n");
-    printf("S: Send message to Process pid\n");
-    printf("R: Receive message\n");
-    printf("Y: Reply message to Process pid\n");
-    printf("N: Create new SEM\n");
-    printf("P: Operate sem P operation\n");
-    printf("V: Operate sem V operation\n");
-    printf("I: Print process info\n");
-    printf("T: Print all info\n");
-}
-
-// Function to process the user command
-// first arg
-void processCommand(char* command, int param1, int param2)
-{
-    switch (command[0]) // accessing the first character of the command string
-    {
-    case 'C':
-        printf("Creating a new process...\n");
-        // Add code to create a process here
-        if (createProcess(param1))
-        {
-            printf("Error: cannot create Process\n");
-        }
-        break;
-    case 'F':
-        printf("Forking a process...\n");
-        // Add code to fork a process here
-        if (forkProcess())
-        {
-            printf("Error: cannot fork Process\n");
-        }
-        break;
-    case 'K':
-        printf("Killing a process...\n");
-        // Add code to kill a process here
-        if (kill(param1))
-        {
-            printf("Error: cannot kill Process PID %d\n", param1);
-        }
-        break;
-    case 'E':
-        // No action needed here, handled in main loop
-        printf("Exit the stimulation\n");
-        exitProcess();
-        break;
-    case 'T':
-        // No action needed here, handled in main loop
-        printf("Print the total info stimulation\n");
-        total_info();
-        break;
-    default:
-        printf("Invalid command! Please enter a valid command.\n");
-        break;
-    }
-}
-
-int createProcess(int priority){
-    PCB *newPCB = (PCB*) malloc(sizeof(PCB));
-    if (newPCB == NULL){
-        printf("Error: cannot create newPCB\n");
-        free(newPCB);
+        printf("Failed to create process.\n");
         return 0;
     }
-    
-    newPCB->pid = findPID();
-    newPCB->priority = priority;
-    newPCB->state = READY;
-    newPCB->proc_message = List_create();
-    if (newPCB->proc_message == NULL){
-        printf("Error: cannot create list for PCB\n");
-        free(newPCB);
-        return 0;
-    }
-    
-   //add to ready Q
+
+    // add to ready Q
     switch (priority)
     {
     case 0:
-        if (List_append(lowPriority,newPCB)==-1){
-            printf("Error cant add to ready Q\n");
+        if (List_append(lowPriority, new_process) == -1)
+        {
+            printf("Error cant add to lowPriority Q\n");
         }
         break;
     case 1:
-        if (List_append(mediumPriority,newPCB)==-1){
-            printf("Error cant add to ready Q\n");
+        if (List_append(mediumPriority, new_process) == -1)
+        {
+            printf("Error cant add to mediumPriority Q\n");
         }
         break;
     case 2:
-        if (List_append(highPriority,newPCB)==-1){
-            printf("Error cant add to ready Q");
+        if (List_append(highPriority, new_process) == -1)
+        {
+            printf("Error cant add to highPriority Q");
         }
         break;
-    
+
     default:
         printf("Invalid priority number\n");
+        if (new_process != NULL)
+        {
+            free(new_process);
+        }
         return 0;
         break;
-    } 
-     
- 
-    
-    int newPCB_pid = newPCB->pid;
-    printf("newPCB_pid is %d\n", newPCB_pid);
-    proc_info(newPCB_pid); 
-    return newPCB->pid;
+    }
 
+    printf("List count is %d \n", List_count(mediumPriority));
+
+    printf("newPCB_pid is %d\n", new_process->pid);
+    proc_info(new_process->pid);
+    return new_process->pid;
 }
 
 bool forkProcess()
@@ -257,50 +102,48 @@ bool forkProcess()
 
 bool kill(int pid)
 {
-    // Search and remove from priority queues only
-    void *ptr_pid = &pid;
-    if (List_search(lowPriority, pComparator, ptr_pid) != NULL)
+    // check if it is a initP
+    int initP_id = initP->pid;
+    if (pid == initP_id)
     {
-        if (searchAndKill(lowPriority, pid))
-        {
-            printf("Error: cannot kill PID %d\n", pid);
-        };
-    }
-    else if (List_search(mediumPriority, pComparator, ptr_pid) != NULL)
-    {
-        if (searchAndKill(mediumPriority, pid ))
-        {
-            printf("Error: cannot kill PID %d\n", pid);
-        };
-    }
-    else if (List_search(lowPriority, pComparator, ptr_pid) != NULL)
-    {
-        if (searchAndKill(lowPriority, pid))
-        {
-            printf("Error: cannot kill PID %d\n", pid);
-        };
-    }
-    else if (List_search(waitForReceiveQueue, pComparator, ptr_pid) != NULL)
-    {
-        if (searchAndKill(waitForReceiveQueue, pid))
-        {
-            printf("Error: cannot kill PID %d\n", pid);
-        };
-    }
-    else if (List_search(waitForReplyQueue, pComparator, ptr_pid) != NULL)
-    {
-        if (searchAndKill(waitForReplyQueue, pid))
-        {
-            printf("Error: cannot kill PID %d\n", pid);
-        };
-    }
-    else
-    {
-        printf("Error: Process with PID %d does not exist\n", pid);
+        printf("Error cannot remove initP\n");
         return false;
     }
+    // Search and remove from priority queues only
 
-    printf("Sucess kill PID %d", pid);
+    Node *findPid_node = findPCB(pid);
+    PCB *PCB_p = (PCB *)(findPid_node->pItem);
+    int find_pid_priority = PCB_p->pid;
+    switch (find_pid_priority)
+    {
+    case 0:
+        if (List_remove(lowPriority) == NULL)
+        {
+            printf("Error removing from queue \n");
+            return false;
+        }
+        break;
+    case 1:
+        if (List_remove(mediumPriority) == NULL)
+        {
+            printf("Error removing from queue \n");
+            return false;
+        }
+        break;
+    case 2:
+        if (List_remove(highPriority) == NULL)
+        {
+            printf("Error removing from queue \n");
+            return false;
+        }
+        break;
+
+    default:
+        printf("Error removing from queue \n");
+        return 0;
+
+        break;
+    }
 
     return true;
 };
@@ -311,8 +154,8 @@ void exitProcess()
     // If yes, kill the init P
     if (List_count(highPriority) == 0 && List_count(mediumPriority) == 0 && List_count(lowPriority) == 0)
     {
-        // kill the init P
-        // return ;
+        free(initP);
+        return;
     }
     else
     {
@@ -332,13 +175,13 @@ void exitProcess()
     if (next_runningP_node == NULL)
     {
         printf("Error: cannot get the next running P\n");
-        return ;
+        return;
     }
     PCB *next_runningP = next_runningP_node->pItem;
     runningP = next_runningP;
     total_info_helper(runningP); // print info of next running P
 
-    return ;
+    return;
 };
 
 int quantum();
@@ -346,90 +189,31 @@ int quantum();
 int send(int pid, char *msg)
 {
     // add msg to list messages
-    message *new_msg = (message *)malloc(sizeof(message));
-    if (new_msg == NULL)
+    message *create_msg = allocate_message(msg);
+    if (create_msg == NULL)
     {
-        printf("Error: Memory allocation failed for message\n");
-        return false;
+        printf("Error create new message\n");
+        return 0;
     }
-
-    // populate new_msg
-    new_msg->senderPid = runningP->pid;
-    strncpy(new_msg->msg, msg, MAX_MSG_LENGTH);
-    new_msg->msg[MAX_MSG_LENGTH] = '\0';
 
     // find pid of receiverP
-    Node *nodeReceiver;
-    PCB *PCBReceiver;
-    if (List_search(lowPriority, pComparator, &pid) != NULL)
-    {
-        nodeReceiver = List_curr(lowPriority);
-    }
-    else if (List_search(mediumPriority, pComparator, &pid) != NULL)
-    {
-        nodeReceiver = List_curr(mediumPriority);
-    }
-    else if (List_search(highPriority, pComparator, &pid) != NULL)
-    {
-        nodeReceiver = List_curr(highPriority);
-    }
-    else
-    {
-        printf("Error: Process with PID %d does not exist\n", pid);
-        return false;
-    }
+    Node *receiverP_node = findPCB(pid);
+    PCB *receiverP = (PCB *)(receiverP_node->pItem);
 
     // append message to receiverP
-    PCBReceiver = nodeReceiver->pItem;
-    if (List_append(PCBReceiver->proc_message, new_msg) == -1)
+
+    if (List_append(receiverP->proc_message, create_msg) == -1)
     {
         printf("Error: Failed to append message to list\n");
-        free(new_msg); // Free the allocated memory
+        free(create_msg); // Free the allocated memory
         return 0;
     }
 
-    // remove sender from ready Q
-    int sender_priority = runningP->priority;
-    Node *senderNode;
-    switch (sender_priority)
-    {
-    case 0:
-        senderNode = List_remove(lowPriority);
-        if (senderNode == NULL)
-        {
-            printf("Error: removing senderNode from ready Queue");
-            return 0;
-        }
-        break;
-    case 1:
-        senderNode = List_remove(mediumPriority);
-        if (senderNode == NULL)
-        {
-            printf("Error: removing senderNode from ready Queue");
-            return 0;
-        }
-        break;
-    case 2:
-        senderNode = List_remove(highPriority);
-        if (senderNode == NULL)
-        {
-            printf("Error: removing senderNode from ready Queue");
-            return 0;
-        }
-        break;
-
-    default:
-        printf("Error: inappropriate sender_priority");
-        return 0;
-        break;
-    }
-    // append to the waitForReplyQueue
-    List_append(waitForReplyQueue, senderNode);
     // block P
     runningP->state = BLOCKED;
 
-    printf("Sucess send message to PID %d with msg: %s\n",pid,new_msg->msg );
-    printf("senderID: %d\n",new_msg->senderPid);
+    printf("Sucess send message to PID %d with msg: %s\n", pid, msg);
+    printf("senderID: %d\n", create_msg->senderPid);
 
     return 1;
 };
@@ -437,93 +221,18 @@ int send(int pid, char *msg)
 int receive()
 {
     // block P
-    runningP->state = BLOCKED;
-    // remove from ready Queue
-    int receiver_priority = runningP->priority;
-    Node *receiveNode;
-    switch (receiver_priority)
-    {
-    case 0:
-        receiveNode = List_remove(lowPriority);
-        if (receiveNode == NULL)
-        {
-            printf("Error: removing receiveNode from ready Queue");
-            return 0;
-        }
-        break;
-    case 1:
-        receiveNode = List_remove(mediumPriority);
-        if (receiveNode == NULL)
-        {
-            printf("Error: removing receiveNode from ready Queue");
-            return 0;
-        }
-        break;
-    case 2:
-        receiveNode = List_remove(highPriority);
-        if (receiveNode == NULL)
-        {
-            printf("Error: removing receiveNode from ready Queue");
-            return 0;
-        }
-        break;
 
-    default:
-        printf("Error: inappropriate sender_priority");
-        return 0;
-        break;
-    }
-    // add to waitForReceiveQueue
-    List_append(waitForReceiveQueue, receiveNode);
+    PCB *receiveP = runningP;
+    receiveP->state = BLOCKED;
 
     // dequeye message from list of messages, check if has message or not
-    message *receive_msg;
-    PCB *receivePCB = receiveNode->pItem;
+    message *receive_msg = NULL;
 
-    receive_msg = List_trim(receivePCB->proc_message);
+    receive_msg = List_trim(runningP->proc_message);
     if (receive_msg == NULL)
     {
         printf("Error: cannot get the receive msg");
         return 0;
-    }
-    else
-    {
-        // remove from waitForReceiveQueue
-        receiveNode = List_remove(waitForReceiveQueue);
-        receivePCB = receiveNode->pItem;
-        // append to the appropriate queue
-        int receive_priority = receivePCB->priority;
-        switch (receive_priority)
-        {
-        case 0:
-            if (List_append(lowPriority, receiveNode))
-            {
-                printf("Error: cannot append to readyQ\n");
-                return 0;
-            };
-            break;
-        case 1:
-            if (List_append(mediumPriority, receiveNode))
-            {
-                printf("Error: cannot append to readyQ\n");
-                return 0;
-            };
-            break;
-        case 2:
-            if (List_append(highPriority, receiveNode))
-            {
-                printf("Error: cannot append to readyQ\n");
-                return 0;
-            };
-            break;
-
-        default:
-            printf("Error: inappropriate receive_priority");
-            return 0;
-            break;
-        }
-
-
     }
 
     // get sender id
@@ -538,7 +247,7 @@ int receive()
         return 0;
     }
     // unblock P
-    receivePCB->state = READY;
+    receiveP->state = READY;
     return 1;
 };
 
@@ -546,17 +255,16 @@ int reply(int pid, char *msg)
 {
 
     printf("%s\n", msg);
-    PCB *getPCBSender = NULL;
-    getPCBSender = findPCB(pid);
+    Node *sender_node = findPCB(pid);
 
-    if (getPCBSender == NULL)
+    if (sender_node == NULL)
     {
         printf("Error: cannot get the Sender PCB\n");
         return 0;
     }
     else
     {
-        getPCBSender->state = READY;
+        ((PCB *)sender_node->pItem)->state = READY;
     }
     return 1;
 };
@@ -600,7 +308,7 @@ int P(int semID)
     sem *getSem;
     getSem = &semList[semID];
     getSem->value--;
-    
+
     // If semaphore value is negative, block the process
     if (getSem->value < 0)
     {
@@ -646,70 +354,46 @@ int V(int semID)
 void proc_info(int pid)
 {
     printf("here");
-    PCB *getPCBSender = findPCB(pid);
+    Node *PCB_node = findPCB(pid);
 
-    if (getPCBSender == NULL)
+    if (PCB_node == NULL)
     {
-        printf("Error: cannot get the Sender PCB\n");
+        printf("Error: cannot get the Sender Node\n");
     }
     else
     {
-        printf("The pid of PCB is %d\n", getPCBSender->pid);
-        printf("The priority of PCB is %d\n", getPCBSender->priority);
-        printf("The state of PCB is %d\n", getPCBSender->state);
+        PCB *process = (PCB *)PCB_node->pItem;
+        printf("The pid of PCB is %d\n", process->pid);
+        printf("The priority of PCB is %d\n", process->priority);
+        printf("The state of PCB is %d\n", process->state);
     }
-    return ;
+    return;
 };
 
 void total_info(void)
 {
-    // loop through all queues
-    // call procinfo
+    // Define an array of pointers to the priority queues
+    List *priorityQueues[3] = {lowPriority, mediumPriority, highPriority};
 
-    Node *node_ptr = List_first(lowPriority);
-    PCB *PCB_ptr = node_ptr->pItem;
-
-    while (node_ptr->pNext != NULL)
+    // Loop through each priority queue
+    for (int i = 0; i < 3; i++)
     {
-        PCB_ptr = node_ptr->pItem;
-        total_info_helper(PCB_ptr);
-        node_ptr = node_ptr->pNext;
-    };
+        List *priorityQueue = priorityQueues[i];
+        // Check if the priority queue is not empty
+        if (List_count(priorityQueue) > 0)
+        {
+            Node *node_ptr = List_first(priorityQueue);
 
-    node_ptr = List_first(mediumPriority);
-
-    while (node_ptr->pNext != NULL)
-    {
-        PCB_ptr = node_ptr->pItem;
-        total_info_helper(PCB_ptr);
-        node_ptr = node_ptr->pNext;
-    };
-
-    node_ptr = List_first(highPriority);
-
-    while (node_ptr->pNext != NULL)
-    {
-        PCB_ptr = node_ptr->pItem;
-        total_info_helper(PCB_ptr);
-        node_ptr = node_ptr->pNext;
-    };
-
-    node_ptr = List_first(waitForReceiveQueue);
-
-    while (node_ptr->pNext != NULL)
-    {
-        PCB_ptr = node_ptr->pItem;
-        total_info_helper(PCB_ptr);
-        node_ptr = node_ptr->pNext;
-    };
-
-    node_ptr = List_first(waitForReplyQueue);
-    while (node_ptr->pNext != NULL)
-    {
-        PCB_ptr = node_ptr->pItem;
-        total_info_helper(PCB_ptr);
-        node_ptr = node_ptr->pNext;
-    };
+            // Loop through each node in the priority queue
+            while (node_ptr != NULL)
+            {
+                PCB *PCB_ptr = (PCB *)node_ptr->pItem;
+                total_info_helper(PCB_ptr);
+                node_ptr = node_ptr->pNext;
+            }
+        }
+    }
+    return;
 }
 
 void Init()
@@ -731,20 +415,6 @@ void Init()
     if (lowPriority == NULL)
     {
         printf("Error: cannot create lowPriority\n");
-    }
-
-    // Queue wait for receive msg
-    waitForReceiveQueue = List_create();
-    if (waitForReceiveQueue == NULL)
-    {
-        printf("Error: cannot create waitForReceiveQueue\n");
-    }
-
-    // Queue wait for reply msg
-    waitForReplyQueue = List_create();
-    if (waitForReplyQueue == NULL)
-    {
-        printf("Error: cannot create waitForReplyQueue\n");
     }
 
     // Initialize semList
@@ -772,26 +442,14 @@ void Init()
     }
 
     // Initialize initP
-   // initP = NULL; // Assuming initP is a global variable declared elsewhere
+    // initP = NULL; // Assuming initP is a global variable declared elsewhere
 }
 
-
-int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        printf("Insufficient arguments provided.\n");
-        return 1; // indicate error
-    }
-
-   // displayMenu();
-
-    char *command = argv[1]; // Corrected to start from argv[1]
-    int p2 = (argc > 2) ? atoi(argv[2]) : 0;
-    int p3 = (argc > 3) ? atoi(argv[3]) : 0;
-
-    printf("Arguments received are: %s, %d, %d\n", command, p2, p3);
+int main(int argc, char *argv[])
+{
     Init();
-    processCommand(command, p2, p3); // Passing command, not argv[0]
+//    displayMenu();
+    processCommand();
 
-    return 0; // indicate success
+    return 0;
 }
-
