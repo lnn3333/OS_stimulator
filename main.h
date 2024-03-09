@@ -39,7 +39,7 @@ int reply(int pid, char *msg); // null terminate string, MAX lenght of msg = 40 
 
 // New sem| N: init name,value of SEM (0-4) (can do only once, error if attempt again)
 // Report: action taken, Success or Failure
-int new_sem(int semID, int value);
+int new_sem(int semID);
 
 // sem P |P : execute the semaphore P
 // Report action taken (blocked or not), success or failure.
@@ -64,7 +64,6 @@ void Init();
 
 // CPU scheduler using round robin for preemptive
 bool cpu_scheduler();
-// execute the Process (switch state = RUNNING )
-bool executeP(PCB *process);
+
 
 #endif // _MAIN_H_

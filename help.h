@@ -24,6 +24,8 @@ void printState(PCB* process);
 
 void getRunningP();
 
+bool add_to_priority(int priority, PCB* item);
+
 
 
 #endif

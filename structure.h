@@ -30,7 +30,7 @@ struct PCB_s
     List *proc_message;
 };
 
-// Semaphore data structure
+// Binary Semaphore data structure
 
 typedef struct sem_S sem;
 struct sem_S
@@ -52,6 +52,9 @@ struct message_S
 extern List *lowPriority;
 extern List *mediumPriority;
 extern List *highPriority;
+// Block Q use for Send, Receive
+extern List *blockQ;
+
 extern PCB *runningP;
 extern PCB *initP;
 extern sem semList[5];

@@ -1,16 +1,13 @@
 #include "help.h"
 
-
 int findPID()
 {
     static int availablePID = 0;
     return availablePID++;
 };
 
-
-
-// search the PCB base on pid and make current item the found item; return -1 if not found; return the priority 
-Node* findPCB(int pid)
+// search the PCB base on pid and make current item the found item; return -1 if not found; return the priority
+Node *findPCB(int pid)
 {
     Node *PCBSender = NULL; // Initialize to NULL to handle cases where PCB is not found
 
@@ -29,6 +26,10 @@ Node* findPCB(int pid)
     {
         return PCBSender;
     }
+    else if ((PCBSender = List_search(blockQ, pComparator, ptr_pid)) != NULL)
+    {
+        return PCBSender;
+    }
     else
     {
         fprintf(stderr, "Error: Sender with PID %d does not exist\n", pid);
@@ -36,9 +37,10 @@ Node* findPCB(int pid)
     }
 }
 
-//allocat new message
+// allocat new message
 
-message* allocate_message(char *msg){
+message *allocate_message(char *msg)
+{
     message *new_msg = (message *)malloc(sizeof(message));
     if (new_msg == NULL)
     {
@@ -52,7 +54,6 @@ message* allocate_message(char *msg){
     new_msg->msg[MAX_MSG_LENGTH] = '\0';
     return new_msg;
 }
-
 
 // display info of the PCB
 void total_info_helper(PCB *pcb)
@@ -89,33 +90,77 @@ void displayMenu()
     printf("T: Print all info\n");
 }
 
-
-
-PCB* allocateProcess(int priority){
-    PCB *newPCB = (PCB*) malloc(sizeof(PCB));
-    if (newPCB == NULL){
+PCB *allocateProcess(int priority)
+{
+    PCB *newPCB = (PCB *)malloc(sizeof(PCB));
+    if (newPCB == NULL)
+    {
         printf("Error: cannot create newPCB\n");
         free(newPCB);
         return NULL;
     }
-    
+
     newPCB->pid = findPID();
     newPCB->priority = priority;
     newPCB->state = READY;
     newPCB->proc_message = List_create();
-    if (newPCB->proc_message == NULL){
+    if (newPCB->proc_message == NULL)
+    {
         printf("Error: cannot create list for PCB\n");
         free(newPCB);
         return NULL;
     }
     return newPCB;
-
 }
 
-void printState(PCB* process){
+void printState(PCB *process)
+{
     printf("State of PID %d is %d:", process->pid, process->state);
 }
 
-void getRunningP(){
+void getRunningP()
+{
     printf("PID running is %d\n", runningP->pid);
 }
+
+bool add_to_priority(int priority, PCB *item)
+{
+    if (item == NULL)
+    {
+        printf("Item is NULL \n");
+        return false;
+    }
+    switch (priority)
+    {
+    case 0:
+        if (List_append(highPriority, item) == -1)
+        {
+            printf("Error cant add to highPriority Q\n");
+        }
+        break;
+    case 1:
+        if (List_append(mediumPriority, item) == -1)
+        {
+            printf("Error cant add to mediumPriority Q\n");
+        }
+        break;
+    case 2:
+        if (List_append(lowPriority, item) == -1)
+        {
+            printf("Error cant add to lowPriority Q");
+        }
+        break;
+
+    default:
+        printf("Invalid priority number\n");
+        if (item != NULL)
+        {
+            free(item);
+        }
+        return false;
+        break;
+    }
+    printf("Success add to priorityQ\n");
+
+    return true;
+};

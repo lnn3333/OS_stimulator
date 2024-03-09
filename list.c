@@ -251,7 +251,6 @@ void *List_search(List *pList, COMPARATOR_FN pComparator, void *pComparisonArg) 
     }
     // No match found, set the out-of-bounds reason
     pList->lastOutOfBoundsReason = LIST_OOB_END;
-    printf("end \n");
     return NULL;
 }
 
