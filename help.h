@@ -20,6 +20,9 @@ void displayMenu();
 
 PCB* allocateProcess(int priority);
 
+void printState(PCB* process);
+
+void getRunningP();
 
 
 

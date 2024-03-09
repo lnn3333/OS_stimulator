@@ -111,3 +111,11 @@ PCB* allocateProcess(int priority){
     return newPCB;
 
 }
+
+void printState(PCB* process){
+    printf("State of PID %d is %d:", process->pid, process->state);
+}
+
+void getRunningP(){
+    printf("PID running is %d\n", runningP->pid);
+}

@@ -1,4 +1,5 @@
 #include "main.h"
+#include <unistd.h>
 
 // Define the variables
 List *lowPriority = NULL;
@@ -170,14 +171,12 @@ void exitProcess()
     }
 
     // get the next running P
-    Node *next_runningP_node = List_first(lowPriority);
-    if (next_runningP_node == NULL)
+    bool res = cpu_scheduler();
+    if (res == false)
     {
-        printf("Error: cannot get the next running P\n");
+        printf("Error from cpu scheduling\n");
         return;
     }
-    PCB *next_runningP = next_runningP_node->pItem;
-    runningP = next_runningP;
     total_info_helper(runningP); // print info of next running P
 
     return;
@@ -210,7 +209,12 @@ int send(int pid, char *msg)
 
     // block P
     runningP->state = BLOCKED;
-
+    bool res = cpu_scheduler();
+    if (res == false)
+    {
+        printf("Error from cpu scheduling\n");
+        return 0;
+    }
     printf("Sucess send message to PID %d with msg: %s\n", pid, msg);
     printf("senderID: %d\n", create_msg->senderPid);
 
@@ -223,6 +227,8 @@ int receive()
 
     PCB *receiveP = runningP;
     receiveP->state = BLOCKED;
+
+    getRunningP();
 
     // dequeye message from list of messages, check if has message or not
     message *receive_msg = NULL;
@@ -537,16 +543,37 @@ bool executeP(PCB *process)
     return 1;
 };
 
-bool cpu_scheduler(){
-   
-    PCB* resumeP = runningP;
-    if(List_append(lowPriority, resumeP)==0){
+bool cpu_scheduler()
+{
+
+    PCB *resumeP = runningP;
+    if (List_append(lowPriority, resumeP) == 0)
+    {
         printf("Error adding process to low priority \n");
         return false;
     }
 
-    PCB* nextP = List_trim(highPriority);
-    if(executeP(nextP)==0){
+
+    PCB *nextP;
+    if(List_count(highPriority) > 0){
+        List_first(highPriority);
+        nextP =(PCB*) List_remove(highPriority);
+    }
+    else  if(List_count(mediumPriority) > 0){
+        List_first(mediumPriority);
+        nextP =(PCB*) List_remove(mediumPriority);
+    }
+    else  if(List_count(lowPriority) > 0){
+        List_first(lowPriority);
+        nextP =(PCB*) List_remove(lowPriority);
+    }
+    else{
+        nextP = initP;
+    }
+
+   
+    if (executeP(nextP) == 0)
+    {
         return false;
     }
     return true;
@@ -555,18 +582,20 @@ bool cpu_scheduler(){
 int main(int argc, char *argv[])
 {
     Init();
+    int q = 5;
     //    displayMenu();
-    while(1){
+    while (1)
+    {
         processCommand();
 
-        //every q second call the cpuscheluer
-        if(cpu_scheduler() == 0){
+        // every q second call the cpuscheluer
+        sleep(q);
+        bool res = cpu_scheduler();
+        if (res == false)
+        {
             printf("Error from cpu scheduling\n");
-            exitProcess();
-            break ; 
+            break;
         }
-    
-    
     }
 
     return 0;
