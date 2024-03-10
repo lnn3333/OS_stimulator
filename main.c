@@ -380,6 +380,7 @@ int V(int semID)
         if (List_count(getSem->pList) > 0)
         {
             // Get the first process waiting on the semaphore
+            List_first(getSem->pList);
             waitingProcess = (PCB *)List_remove(getSem->pList);
             waitingP_priority = waitingProcess->priority;
             waitingProcess->state = READY;
