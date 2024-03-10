@@ -66,8 +66,8 @@ void total_info_helper(PCB *pcb)
     else // display info
     {
         printf("The pid of PCB is %d\n", pcb->pid);
-        printf("The priority of PCB is %d\n", pcb->priority);
-        printf("The state of PCB is %d\n", pcb->state);
+        printf("The priority of PCB is %s\n", getPriorityName(pcb->priority));
+        printf("The state of PCB is %s\n", getStateName(pcb->state)); 
     }
 }
 
@@ -163,4 +163,38 @@ bool add_to_priority(int priority, PCB *item)
     printf("Success add to priorityQ\n");
 
     return true;
+};
+
+
+const char *getStateName ( enum processState state){
+    switch (state)
+    {
+    case READY: return "READY";
+        break;
+    case RUNNING: return "RUNNING";
+        break;
+    case BLOCKED: return "BLOCKED";
+        break;
+    case DEADLOCK: return "DEADLOCK";
+        break;
+    
+    default:
+        return "invalid state";
+        break;
+    }
+};
+
+const char *getPriorityName ( int priority){
+    switch (priority)
+    {
+    case 0: return "High";
+        break;
+    case 1: return "Medium";
+        break;
+    case 2: return "Low";
+        break;   
+    default:
+        return "invalid priority";
+        break;
+    }
 };

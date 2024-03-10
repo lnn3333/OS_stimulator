@@ -26,6 +26,9 @@ void getRunningP();
 
 bool add_to_priority(int priority, PCB* item);
 
+const char *getStateName ( enum processState);
+
+const char *getPriorityName ( int priority);
 
 
 #endif

@@ -195,6 +195,7 @@ void *List_remove(List *pList) {
     removedNode->pNext = NULL;
     removedNode->pPrev = NULL;
     removedNode->pItem = NULL;
+    pList->count--;
 
     return removedItem;
 }
@@ -245,6 +246,8 @@ void *List_search(List *pList, COMPARATOR_FN pComparator, void *pComparisonArg) 
         if (pComparator(ptr_node->pItem, pComparisonArg)) {
             // Match found, update the current node and return the item
             pList->pCurrentNode = ptr_node;
+            int res = *(int*)(ptr_node->pItem);
+            printf("found matching item, id is %d\n",res );
             return ptr_node;
         }
         ptr_node = ptr_node->pNext;
