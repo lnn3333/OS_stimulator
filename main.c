@@ -368,7 +368,7 @@ int P(int semID)
 int V(int semID)
 {
     PCB *waitingProcess;
-    // int waitingP_priority = -1;
+
     if (semID < 0 || semID > 4)
     {
         printf("Error: Semaphore ID out of range\n");
@@ -385,22 +385,14 @@ int V(int semID)
             // Get the first process waiting on the semaphore
             List_first(getSem->pList);
             waitingProcess = (PCB *)List_remove(getSem->pList);
-          //  waitingP_priority = waitingProcess->priority;
             waitingProcess->state = READY;
         }
     }
 
-    if ( List_prepend(highPriority,waitingProcess) == false)
+    if ( add_to_priority(waitingProcess->priority, waitingProcess) == false)
     {
         return 0;
     };
-
-    bool res = cpu_scheduler();
-    if (res == false)
-    {
-        printf("Error from cpu scheduling\n");
-        return 0;
-    }
 
     return 1; // Operation succeeded
 }
