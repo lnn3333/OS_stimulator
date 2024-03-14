@@ -14,7 +14,7 @@ sem semList[5]; // Assuming semList is an array of semaphores
 
 int createProcess(int priority)
 {
-
+//allocate memory of Process
     PCB *new_process = allocateProcess(priority);
     if (new_process == NULL)
     {
@@ -22,7 +22,7 @@ int createProcess(int priority)
         return 0;
     }
 
-    // add to ready Q
+// add to ready Q
     add_to_priority(priority,new_process);
     proc_info(new_process->pid);
     return new_process->pid;
@@ -30,14 +30,14 @@ int createProcess(int priority)
 
 bool forkProcess()
 {
-    // check if Process is init
+// check if Process is init
     if (runningP == initP)
     {
         printf("Error: Cannot fork initP");
         return false;
     }
 
-    // copy the runningP, add to ready queue
+// copy the runningP, add to ready queue
     PCB *runningPCopy = (PCB *)(malloc(sizeof(PCB)));
     if (runningPCopy == NULL)
     {
@@ -47,40 +47,28 @@ bool forkProcess()
     memcpy(runningPCopy, runningP, sizeof(PCB));
     runningPCopy->pid = findPID();
 
-    switch (runningPCopy->priority)
-    {
-    case (0):
-        List_append(highPriority, runningPCopy);
-        break;
-    case (1):
-        List_append(mediumPriority, runningPCopy);
-        break;
-    case (2):
-        List_append(lowPriority, runningPCopy);
-        break;
+//add to readyQ
+    if(add_to_priority(runningPCopy->priority,runningPCopy)==false){
+       return false; 
+    };
 
-    default:
-        printf("Error appending process to queue");
-        return false;
-        break;
-    }
     printf("Process forked with PID: %d\n", runningPCopy->pid);
     return true;
 };
 
 bool kill(int pid)
 {
-    // check if it is a initP
-    int initP_id = initP->pid;
-    if (pid == initP_id)
+// check if it is a initP
+    if (pid == initP->pid)
     {
         printf("Error cannot remove initP\n");
         return false;
     }
-    // Search and remove from priority queues only
 
-    Node *findPid_node = findPCB(pid);
-    PCB *PCB_p = (PCB *)(findPid_node->pItem);
+// Search and remove from priority queues only
+
+    PCB *PCB_p = (PCB *)findPCB(pid);
+//remove if in blockQ    
     if (PCB_p->state == BLOCKED)
     {
         if (List_remove(blockQ) == NULL)
@@ -89,40 +77,39 @@ bool kill(int pid)
             return false;
         }
     }
-    else
+//remove if in readyQ  
+    int find_pid_priority = PCB_p->priority;
+    switch (find_pid_priority)
     {
-        int find_pid_priority = PCB_p->priority;
-        switch (find_pid_priority)
+    case 0:
+        if (List_remove(highPriority) == NULL)
         {
-        case 0:
-            if (List_remove(highPriority) == NULL)
-            {
-                printf("Error removing from queue \n");
-                return false;
-            }
-            break;
-        case 1:
-            if (List_remove(mediumPriority) == NULL)
-            {
-                printf("Error removing from queue \n");
-                return false;
-            }
-            break;
-        case 2:
-            if (List_remove(lowPriority) == NULL)
-            {
-                printf("Error removing from queue \n");
-                return false;
-            }
-            break;
-
-        default:
-            printf("Error invalid priority \n");
-            return 0;
-
-            break;
+            printf("Error removing from queue \n");
+            return false;
         }
+        break;
+    case 1:
+        if (List_remove(mediumPriority) == NULL)
+        {
+            printf("Error removing from queue \n");
+            return false;
+        }
+        break;
+    case 2:
+        if (List_remove(lowPriority) == NULL)
+        {
+            printf("Error removing from queue \n");
+            return false;
+        }
+        break;
+
+    default:
+        printf("Error invalid priority \n");
+        return 0;
+
+        break;
     }
+    
     printf("Suceed removing PID %d\n", pid);
     return true;
 };
