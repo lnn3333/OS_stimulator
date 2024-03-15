@@ -9,7 +9,7 @@ List *blockQ = NULL;
 
 PCB *runningP = NULL;
 PCB *initP = NULL;
-sem semList[5]; // Assuming semList is an array of semaphores
+sem *semList = NULL; // Assuming semList is an array of semaphores
 // Define helper function to find an available PID
 
 int createProcess(int priority)
@@ -24,6 +24,7 @@ int createProcess(int priority)
 
 // add to ready Q
     add_to_priority(priority,new_process);
+    printf("Sucess create process\n");
     proc_info(new_process->pid);
     return new_process->pid;
 }
@@ -53,6 +54,7 @@ bool forkProcess()
     };
 
     printf("Process forked with PID: %d\n", runningPCopy->pid);
+    total_info_helper(runningPCopy);
     return true;
 };
 
@@ -65,9 +67,19 @@ bool kill(int pid)
         return false;
     }
 
+    if (runningP!=NULL && (pid == runningP->pid))
+    {
+        free(runningP);
+        runningP = NULL;
+    }
+
 // Search and remove from priority queues only
 
     PCB *PCB_p = (PCB *)findPCB(pid);
+    if (PCB_p == NULL){
+        printf("cannot find process with pid %d\n", pid);
+        return false;
+    }
 //remove if in blockQ    
     if (PCB_p->state == BLOCKED)
     {
@@ -78,37 +90,7 @@ bool kill(int pid)
         }
     }
 //remove if in readyQ  
-    int find_pid_priority = PCB_p->priority;
-    switch (find_pid_priority)
-    {
-    case 0:
-        if (List_remove(highPriority) == NULL)
-        {
-            printf("Error removing from queue \n");
-            return false;
-        }
-        break;
-    case 1:
-        if (List_remove(mediumPriority) == NULL)
-        {
-            printf("Error removing from queue \n");
-            return false;
-        }
-        break;
-    case 2:
-        if (List_remove(lowPriority) == NULL)
-        {
-            printf("Error removing from queue \n");
-            return false;
-        }
-        break;
-
-    default:
-        printf("Error invalid priority \n");
-        return 0;
-
-        break;
-    }
+    
     
     printf("Suceed removing PID %d\n", pid);
     return true;
@@ -118,6 +100,7 @@ void exitProcess()
 {
     // check if all the ready queues are empy
     // If yes, kill the init P
+    int runningP_pid = runningP->pid;
     if (List_count(lowPriority) == 0 && List_count(mediumPriority) == 0 && List_count(highPriority) == 0)
     {
         free(initP);
@@ -127,23 +110,15 @@ void exitProcess()
     {
         if (kill(runningP->pid))
         {
-            printf("Error: cannot kill the running PID %d\n", runningP->pid);
+            printf("Error: cannot kill the running PID %d\n", runningP_pid);
             return;
         }
         else
         {
             printf("Success exit\n");
+            return ;
         }
     }
-
-    // get the next running P
-    bool res = cpu_scheduler();
-    if (res == false)
-    {
-        printf("Error from cpu scheduling\n");
-        return;
-    }
-    total_info_helper(runningP); // print info of next running P
 
     return;
 };
@@ -160,62 +135,56 @@ int quantum()
     return 1;
 };
 
-int send(int pid, char *msg)
+bool send(int pid, char *msg)
 {
-    // allocate message package
+// allocate message package
     if (runningP == NULL){
         printf("Error: there is no running P\n");
-        return 0;
+        return false;
+    }
+    if(pid == runningP->pid){
+        printf("Error: cannot send message to sender\n");
+        return false;
     }
     message *create_msg = allocate_message(msg);
     if (create_msg == NULL)
     {
         printf("Error create new message\n");
-        return 0;
+        return false;
     }
 
-    // find pid of receiverP
-    Node *receiverP_node = findPCB(pid);
-    if (receiverP_node == NULL){
+// find pid of receiverP
+    PCB *receiverP = (PCB *)findPCB(pid);
+    if (receiverP == NULL){
         printf("Error: receiver ID is invalid\n");
-        return 0;
+        return false;
     }
-    PCB *receiverP = (PCB *)(receiverP_node->pItem);
-
-    // append message to receiverP
+// append message to receiverP
 
     if (List_append(receiverP->proc_message, create_msg) == -1)
     {
         printf("Error: Failed to append message to list\n");
         free(create_msg); // Free the allocated memory
-        return 0;
+        return false;
     }
 
     // block P
     runningP->state = BLOCKED;
-    PCB *blockP = runningP;
-
     // add block P to blockQ
-    if (List_append(blockQ, blockP) == -1)
+    if (List_append(blockQ, runningP) == -1)
     {
         printf("Error: Failed to append blockP to list\n");
-        return 0;
+        return false;
     }
-    runningP = NULL;
 
-    bool res = cpu_scheduler();
-    if (res == false)
-    {
-        printf("Error from cpu scheduling\n");
-        return 0;
-    }
+    runningP = NULL;
     printf("Sucess send message to PID %d with msg: %s\n", pid, msg);
     printf("senderID: %d\n", create_msg->senderPid);
 
-    return 1;
+    return true;
 };
 
-int receive()
+bool receive()
 {
     // block P
 
@@ -230,19 +199,15 @@ int receive()
         printf("Error: cannot get the receive msg");
         // add to blockQ
         PCB *blockP = runningP;
+        blockP->state = BLOCKED;
+        runningP = NULL;
         if (List_append(blockQ, blockP) == -1)
         {
             printf("Error: Failed to append blockP to list\n");
-            return 0;
+            return false;
         }
 
-        // get the next runningP
-        bool res = cpu_scheduler();
-        if (res == false)
-        {
-            printf("Error from cpu scheduling\n");
-        }
-        return 0;
+        return false;
     }
 
     // get sender id
@@ -258,63 +223,58 @@ int receive()
     }
     // unblock P
     receiveP->state = READY;
-    return 1;
+    if(add_to_priority(receiveP->priority,receiveP)==false){
+        return 0;
+    };
+    return true;
 };
 
-int reply(int pid, char *msg)
+bool reply(int pid, char *msg)
 {
 
     printf("%s\n", msg);
-    Node *sender_node = findPCB(pid);
+    PCB *PCB_sender = (PCB *) findPCB(pid);
 
-    if (sender_node->pItem == NULL)
+    if (PCB_sender == NULL)
     {
         printf("Error: cannot get the Sender PCB\n");
-        return 0;
+        return false;
     }
     else
     {
-        PCB *PCB_sender = (PCB *)sender_node->pItem;
         PCB_sender->state = READY;
-        int P_priority = PCB_sender->priority;
-        if (add_to_priority(P_priority, PCB_sender) == false)
+        if (add_to_priority( PCB_sender->priority, PCB_sender) == false)
         {
-            return 0;
+            return false;
         };
         List_remove(blockQ);
+        printf("Unblock Process pid %d \n", PCB_sender->pid);
     }
-    return 1;
+    return true;
 };
 
-int new_sem(int semID)
+bool new_sem(int semID)
 {
     if (semID < 0 || semID > 4)
     {
         printf("Error: value is not in range");
-        return 0;
+        return false;
     }
 
-    sem *newSem = (sem *)malloc(sizeof(sem));
-    if (newSem == NULL)
-    {
-        printf("Error: failure create SEM");
-        return 0;
-    }
-
-    newSem->semID = semID;
-    newSem->value = 1;
-    newSem->pList = List_create();
-    if (newSem->pList == NULL)
+    sem* semItem = &semList[semID];
+    semItem->value = 1;
+    semItem->pList = List_create();
+    if (semItem->pList == NULL)
     {
         printf("Error: failure create Process List for SEM");
-        free(newSem);
-        return 0;
+        free(semItem);
+        return false;
     }
 
-    return 1;
+    return true;
 };
 
-int P(int semID)
+bool P(int semID)
 {
 
     if (semID < 0 || semID > 4)
@@ -326,40 +286,32 @@ int P(int semID)
     getSem = &semList[semID];
     getSem->value--;
 
-    // If semaphore value is negative, block the process
+// If semaphore value is negative, block the process
     if (getSem->value < 0)
     {
-        // Block the process by adding it to the semaphore's process list
+// Block the process by adding it to the semaphore's process list
 
         PCB *blockP = runningP;
-        // schedule the next runningP
-        int res = quantum();
-        if (res == 0)
-        {
-            return false;
-        }
-
-        blockP->state = BLOCKED;
-
         if (!List_append(getSem->pList, blockP))
         {
             printf("Error: Failed to add process to semaphore's process list\n");
             return false;
         }
+        blockP->state = BLOCKED;
     }
     printf("Sucess Block the process on sem ID %d\n", semID);
     return true;
 
-}; //(semID range 0-4)
+}; 
 
-int V(int semID)
+bool V(int semID)
 {
     PCB *waitingProcess;
 
     if (semID < 0 || semID > 4)
     {
         printf("Error: Semaphore ID out of range\n");
-        return 0;
+        return false;
     }
     sem *getSem;
     getSem = &semList[semID];
@@ -372,29 +324,26 @@ int V(int semID)
             // Get the first process waiting on the semaphore
             List_first(getSem->pList);
             waitingProcess = (PCB *)List_remove(getSem->pList);
+
+            //unblock the process, add back to readyQ
             waitingProcess->state = READY;
+            if ( add_to_priority(waitingProcess->priority, waitingProcess) == false)
+            {
+                return false;
+            };
+
+            //print info of the wakeup P
+            printf("Wake up Process PID %d\n",waitingProcess->pid);
         }
     }
 
-    if ( add_to_priority(waitingProcess->priority, waitingProcess) == false)
-    {
-        return 0;
-    };
-
-    return 1; // Operation succeeded
+    return true; // Operation succeeded
 }
 
 void proc_info(int pid)
 {
-    Node *PCB_node = findPCB(pid);
+    PCB *process = (PCB *) findPCB(pid);
 
-    if (PCB_node == NULL)
-    {
-        printf("Error: Cannot find PCB with PID %d\n", pid);
-        return; // Exit early if PCB not found
-    }
-
-    PCB *process = (PCB *)PCB_node->pItem;
     if (process == NULL)
     {
         printf("Error: PCB pointer is NULL for PID %d\n", pid);
@@ -406,7 +355,8 @@ void proc_info(int pid)
 void total_info(void)
 {
     // Define an array of pointers to the priority queues
-    List *priorityQueues[4] = {highPriority, mediumPriority, lowPriority,blockQ};
+    List *priorityQueues[4] = {highPriority, mediumPriority, lowPriority, blockQ};
+    // array of pList of Semaphore
 
     // Loop through each priority queue
     for (int i = 0; i < 4; i++)
@@ -460,29 +410,8 @@ void Init()
         printf("Error: cannot create highP\n");
     }
 
-    // Initialize semList
-    for (int i = 0; i < 5; i++)
-    {
-        // Allocate memory space for each semaphore
-        sem *sem_allocate = (sem *)malloc(sizeof(sem));
-        if (sem_allocate == NULL)
-        {
-            printf("Error: cannot allocate memory for sem\n");
-            // Handle error, return or exit
-        }
-
-        // Assign unique semID values
-        sem_allocate->semID = i;
-
-        // Initialize the semaphore value to 0
-        sem_allocate->value = 0;
-
-        // Initialize the semaphore list to NULL
-        sem_allocate->pList = NULL;
-
-        // Assign the semaphore to the semList
-        semList[i] = *sem_allocate;
-    }
+    // Initialize List for the semaphore
+   semList = (sem*) malloc(sizeof(sem)*5);
 
     // Initialize initP
     initP = allocateProcess(3);
@@ -586,26 +515,21 @@ bool cpu_scheduler()
     PCB *nextP;
     if (List_count(highPriority) > 0)
     {
-        printf("here high\n");
-        printf("listcount is %d\n",List_count(highPriority));
         List_first(highPriority);
         nextP = (PCB *)List_remove(highPriority);
     }
     else if (List_count(mediumPriority) > 0)
     {
-         printf("here med\n");
         List_first(mediumPriority);
         nextP = (PCB *)List_remove(mediumPriority);
     }
     else if (List_count(lowPriority) > 0)
     {
-         printf("here low\n");
         List_first(lowPriority);
         nextP = (PCB *)List_remove(lowPriority);
     }
     else
     {
-         printf("here init\n");
         nextP = initP;
     }
 
@@ -613,7 +537,6 @@ bool cpu_scheduler()
         printf("Error: getting next P\n");
     }
     runningP = nextP;
-    printf("next P id is %d",runningP->pid);
     runningP->state = RUNNING;
     return true;
 };

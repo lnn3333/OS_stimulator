@@ -247,7 +247,6 @@ void *List_search(List *pList, COMPARATOR_FN pComparator, void *pComparisonArg) 
             
             // Match found, update the current node and return the item
             pList->pCurrentNode = ptr_node;
-            int res = *(int*)(ptr_node->pItem);
             return ptr_node->pItem;
         }
         ptr_node = ptr_node->pNext;
