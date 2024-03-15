@@ -47,6 +47,10 @@ PCB *findPCB(int pid)
     {
         return PCBSender;
     }
+    else if ((PCBSender = (PCB *)List_search(&semList[2].pList, pComparator, ptr_pid)) != NULL)
+    {
+        return PCBSender;
+    }
     else if ((PCBSender = (PCB *)List_search(&semList[3].pList, pComparator, ptr_pid)) != NULL)
     {
         return PCBSender;
@@ -190,40 +194,68 @@ bool add_to_priority(int priority, PCB *item)
     return true;
 };
 
-bool remove_from_queue(PCB*process, List* pList, enum processState state ){
-    if(state == READY){
-        switch (process->priority)
-    {
-    case 0:
-        if (List_remove(highPriority) == NULL)
-        {
-            printf("Error removing from queue \n");
-            return false;
-        }
-        break;
-    case 1:
-        if (List_remove(mediumPriority) == NULL)
-        {
-            printf("Error removing from queue \n");
-            return false;
-        }
-        break;
-    case 2:
-        if (List_remove(lowPriority) == NULL)
-        {
-            printf("Error removing from queue \n");
-            return false;
-        }
-        break;
+bool remove_from_queue(int pid ){
+    if (runningP!=NULL && pid == runningP->pid){
+        free(runningP);
+        runningP = NULL;
+    }
 
-    default:
-        printf("Error invalid priority \n");
-        break;
-    }
-    }
-    else if (state == BLOCKED)
+
+    PCB *PCBSender = NULL; // Initialize to NULL to handle cases where PCB is not found
+
+    void *ptr_pid = &pid; // Pointer to the process ID
+
+    // Find sender ID across different priority levels
+    
+    if ((PCBSender = (PCB *)List_search(highPriority, pComparator, ptr_pid)) != NULL)
     {
-        /* remove from blockQ, then search for block Q in sem bloack List */
+        List_remove(highPriority);
+        return true;
+    }
+    else if ((PCBSender = (PCB *)List_search(mediumPriority, pComparator, ptr_pid)) != NULL)
+    {
+       List_remove(mediumPriority);
+        return true;
+    }
+    else if ((PCBSender = (PCB *)List_search(lowPriority, pComparator, ptr_pid)) != NULL)
+    {
+       List_remove(lowPriority);
+        return true;
+    }
+    else if ((PCBSender = (PCB *)List_search(blockQ, pComparator, ptr_pid)) != NULL)
+    {
+       List_remove(blockQ);
+        return true;r;
+    }
+    else if ((PCBSender = (PCB *)List_search(&semList[0].pList, pComparator, ptr_pid)) != NULL)
+    {
+       List_remove(&semList[0].pList);
+        return true;
+    }
+    else if ((PCBSender = (PCB *)List_search(&semList[1].pList, pComparator, ptr_pid)) != NULL)
+    {
+        List_remove(&semList[1].pList);
+        return true;
+    }
+    else if ((PCBSender = (PCB *)List_search(&semList[2].pList, pComparator, ptr_pid)) != NULL)
+    {
+        List_remove(&semList[2].pList);
+        return true;
+    }
+    else if ((PCBSender = (PCB *)List_search(&semList[3].pList, pComparator, ptr_pid)) != NULL)
+    {
+       List_remove(&semList[3].pList);
+        return true;
+    }
+    else if ((PCBSender = (PCB *)List_search(&semList[4].pList, pComparator, ptr_pid)) != NULL)
+    {
+       List_remove(&semList[4].pList);
+        return true;
+    }
+    else
+    {
+        fprintf(stderr, "Error: Sender with PID %d does not exist\n", pid);
+        return NULL; // Return NULL if PCB is not found
     }
     
     
