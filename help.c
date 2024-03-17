@@ -171,8 +171,8 @@ bool remove_from_queue(int pid ){
     {
         List *queue = queues[i];
     
-    PCBSender = (PCB *)List_search(queue, pComparator, (void *)&pid);
-    if (PCBSender != NULL)
+        PCBSender = (PCB *)List_search(queue, pComparator, (void *)&pid);
+        if (PCBSender != NULL)
         {
             List_remove(queue);
             free(PCBSender);

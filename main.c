@@ -15,11 +15,12 @@ sem *semList = NULL; // Assuming semList is an array of semaphores
 bool createProcess(int priority)
 {
 
-    if( (initP!=NULL && priority ==  3) || ((priority<0 || priority >3)) )
+    if( (initP!=NULL && priority ==  3))
     {
         printf("Error: invalid priority\n");
         return false;
     }
+
     // allocate memory of Process
     PCB *new_process = allocateProcess(priority);
     if (new_process == NULL)
@@ -78,6 +79,7 @@ bool kill(int pid)
     {
         free(runningP);
         runningP = NULL;
+        return true;
     }
     // Search and remove from priority queues only
     remove_from_queue(pid);
@@ -251,11 +253,7 @@ bool reply(int pid, char *msg)
 
 bool new_sem(int semID)
 {
-    if (semID < 0 || semID > 4)
-        {
-            printf("Error: Semaphore ID is out of range\n");
-            return false;
-        }
+    
     if (semList[semID].pList != NULL)
     {
         printf("Error: Semaphore %d has already been created\n", semID);
@@ -476,15 +474,18 @@ void processCommand()
             exit(EXIT_FAILURE); // Or take appropriate action
         }
 
-        printf("Enter command and parameter (C <priority>, F, K <pid>, E, T): ");
+        printf("Enter command and parameter: \nC <priority>, F, K <pid>, E, Q, S<id><message>,R, Y, N<id>, P<id>, V<id>, I<id>, T: ");
         scanf(" %c", &command);
-
         // Process user input
         switch (toupper(command))
         {
         case 'C':
         {
             scanf("%d", &priority);
+            if(!(priority>=0 && priority <=3)){
+                printf("Error: invalid priority\n");
+                return  ;
+            }
             createProcess(priority);
             break;
         }
@@ -516,7 +517,11 @@ void processCommand()
             break;
         case 'N':
             scanf("%d", &id);
-
+            if (id < 0 || id > 4)
+            {
+                printf("Error: Semaphore ID is out of range\n");
+                return ;
+            }
             new_sem(id);
             break;
         case 'P':
