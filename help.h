@@ -22,11 +22,9 @@ PCB* allocateProcess(int priority);
 
 void printState(PCB* process);
 
-void getRunningP();
-
 bool add_to_priority(int priority, PCB* item);
 
-bool remove_from_queue(PCB*process, List* pList, enum processState state );
+bool remove_from_queue(int pid );
 
 const char *getStateName ( enum processState);
 

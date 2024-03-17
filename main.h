@@ -35,7 +35,7 @@ bool receive();
 
 // Reply| Y: unblock sender, deliver the reply
 // Report success or failure
-int reply(int pid, char *msg); // null terminate string, MAX lenght of msg = 40 char
+bool reply(int pid, char *msg); // null terminate string, MAX lenght of msg = 40 char
 
 // New sem| N: init name,value of SEM (0-4) (can do only once, error if attempt again)
 // Report: action taken, Success or Failure

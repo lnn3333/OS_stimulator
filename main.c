@@ -67,31 +67,12 @@ bool kill(int pid)
         return false;
     }
 
-    if (runningP!=NULL && (pid == runningP->pid))
-    {
+    if (runningP!=NULL && pid == runningP->pid){
         free(runningP);
         runningP = NULL;
     }
-
 // Search and remove from priority queues only
-
-    PCB *PCB_p = (PCB *)findPCB(pid);
-    if (PCB_p == NULL){
-        printf("cannot find process with pid %d\n", pid);
-        return false;
-    }
-//remove if in blockQ    
-    if (PCB_p->state == BLOCKED)
-    {
-        if (List_remove(blockQ) == NULL)
-        {
-            printf("Error removing from queue \n");
-            return false;
-        }
-    }
-//remove if in readyQ  
-    
-    
+    remove_from_queue(pid);
     printf("Suceed removing PID %d\n", pid);
     return true;
 };
@@ -100,7 +81,7 @@ void exitProcess()
 {
     // check if all the ready queues are empy
     // If yes, kill the init P
-    int runningP_pid = runningP->pid;
+   
     if (List_count(lowPriority) == 0 && List_count(mediumPriority) == 0 && List_count(highPriority) == 0)
     {
         free(initP);
@@ -108,19 +89,17 @@ void exitProcess()
     }
     else
     {
-        if (kill(runningP->pid))
-        {
-            printf("Error: cannot kill the running PID %d\n", runningP_pid);
-            return;
+        if (runningP != NULL){
+            int runningP_pid = runningP->pid;
+            if (!kill(runningP_pid))
+            {
+                printf("Error: cannot kill the running PID %d\n", runningP_pid);
+                return;
+            }
         }
-        else
-        {
-            printf("Success exit\n");
-            return ;
-        }
-    }
 
-    return;
+    }
+    quantum();
 };
 
 int quantum()
@@ -257,7 +236,7 @@ bool new_sem(int semID)
 {
     if (semID < 0 || semID > 4)
     {
-        printf("Error: value is not in range");
+        printf("Error: value is not in range\n");
         return false;
     }
 
@@ -266,7 +245,7 @@ bool new_sem(int semID)
     semItem->pList = List_create();
     if (semItem->pList == NULL)
     {
-        printf("Error: failure create Process List for SEM");
+        printf("Error: failure create Process List for SEM\n");
         free(semItem);
         return false;
     }
@@ -415,7 +394,7 @@ void Init()
 
     // Initialize initP
     initP = allocateProcess(3);
-    runningP = NULL;
+    runningP = initP;
 
 }
 
