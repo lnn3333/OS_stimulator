@@ -64,6 +64,12 @@ void total_info_helper(PCB *pcb)
     {
         printf("Error: cannot get the Sender PCB\n");
     }
+    else if (pcb->pid == initP->pid) // display info
+    {
+        printf("The pid of PCB is %d\n", pcb->pid);
+        printf("The process is initP\n");
+        printf("The state of PCB is %s\n", getStateName(pcb->state)); 
+    }
     else // display info
     {
         printf("The pid of PCB is %d\n", pcb->pid);
@@ -104,13 +110,7 @@ PCB *allocateProcess(int priority)
     newPCB->pid = findPID();
     newPCB->priority = priority;
     newPCB->state = READY;
-    newPCB->proc_message = List_create();
-    if (newPCB->proc_message == NULL)
-    {
-        printf("Error: cannot create list for PCB\n");
-        free(newPCB);
-        return NULL;
-    }
+    newPCB->proc_message = NULL;
     return newPCB;
 }
 
@@ -156,7 +156,6 @@ bool add_to_priority(int priority, PCB *item)
         return false;
         break;
     }
-    printf("Success add to priorityQ\n");
 
     return true;
 };

@@ -6,7 +6,7 @@
 // Functions
 // Create| C: create a P, add to ready Q
 // Report Success or Failure, pid of created P
-int createProcess(int priority); //(0 = high, 1 = norm, 2 = low)
+bool createProcess(int priority); //(0 = high, 1 = norm, 2 = low)
 
 // Fork| F: copy current running P, add to ready Q
 // Report Success or Failure, pid of new P
