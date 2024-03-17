@@ -9,7 +9,7 @@
 int findPID();
 
 // search the PCB base on pid and return the pointer to the PCB; return NULL if not found
-Node* findPCB(int pid);
+PCB* findPCB(int pid);
 
 // display info of the PCB
 void total_info_helper(PCB *pcb);
@@ -22,10 +22,13 @@ PCB* allocateProcess(int priority);
 
 void printState(PCB* process);
 
-void getRunningP();
-
 bool add_to_priority(int priority, PCB* item);
 
+bool remove_from_queue(int pid );
+
+const char *getStateName ( enum processState);
+
+const char *getPriorityName ( int priority);
 
 
 #endif

@@ -195,6 +195,7 @@ void *List_remove(List *pList) {
     removedNode->pNext = NULL;
     removedNode->pPrev = NULL;
     removedNode->pItem = NULL;
+    pList->count--;
 
     return removedItem;
 }
@@ -243,9 +244,10 @@ void *List_search(List *pList, COMPARATOR_FN pComparator, void *pComparisonArg) 
     while (ptr_node != NULL) {
         // Use the comparison function to check for a match
         if (pComparator(ptr_node->pItem, pComparisonArg)) {
+            
             // Match found, update the current node and return the item
             pList->pCurrentNode = ptr_node;
-            return ptr_node;
+            return ptr_node->pItem;
         }
         ptr_node = ptr_node->pNext;
     }

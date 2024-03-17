@@ -7,34 +7,35 @@ int findPID()
 };
 
 // search the PCB base on pid and make current item the found item; return -1 if not found; return the priority
-Node *findPCB(int pid)
+PCB *findPCB(int pid)
 {
-    Node *PCBSender = NULL; // Initialize to NULL to handle cases where PCB is not found
+   
+    if (runningP!=NULL && pid == runningP->pid){
+        return runningP;
+    }
+
+    if (initP!= NULL && pid == initP->pid){
+        return initP;
+    }
+
+    PCB *PCBSender = NULL; // Initialize to NULL to handle cases where PCB is not found
 
     void *ptr_pid = &pid; // Pointer to the process ID
 
     // Find sender ID across different priority levels
-    if ((PCBSender = List_search(highPriority, pComparator, ptr_pid)) != NULL)
+
+    List *queues[9] = {highPriority, mediumPriority, lowPriority, blockQ, semList[0].pList, semList[1].pList, semList[2].pList, semList[3].pList, semList[4].pList};
+    
+    for (int i = 0; i < 9; i++)
     {
-        return PCBSender;
+        List *queue = queues[i];
+    
+        if ((PCBSender = (PCB *)List_search(queue, pComparator, ptr_pid)) != NULL)
+        {
+            return PCBSender;
+        }
     }
-    else if ((PCBSender = List_search(mediumPriority, pComparator, ptr_pid)) != NULL)
-    {
-        return PCBSender;
-    }
-    else if ((PCBSender = List_search(lowPriority, pComparator, ptr_pid)) != NULL)
-    {
-        return PCBSender;
-    }
-    else if ((PCBSender = List_search(blockQ, pComparator, ptr_pid)) != NULL)
-    {
-        return PCBSender;
-    }
-    else
-    {
-        fprintf(stderr, "Error: Sender with PID %d does not exist\n", pid);
-        return NULL; // Return NULL if PCB is not found
-    }
+    return NULL;
 }
 
 // allocat new message
@@ -66,8 +67,8 @@ void total_info_helper(PCB *pcb)
     else // display info
     {
         printf("The pid of PCB is %d\n", pcb->pid);
-        printf("The priority of PCB is %d\n", pcb->priority);
-        printf("The state of PCB is %d\n", pcb->state);
+        printf("The priority of PCB is %s\n", getPriorityName(pcb->priority));
+        printf("The state of PCB is %s\n", getStateName(pcb->state)); 
     }
 }
 
@@ -118,11 +119,6 @@ void printState(PCB *process)
     printf("State of PID %d is %d:", process->pid, process->state);
 }
 
-void getRunningP()
-{
-    printf("PID running is %d\n", runningP->pid);
-}
-
 bool add_to_priority(int priority, PCB *item)
 {
     if (item == NULL)
@@ -163,4 +159,62 @@ bool add_to_priority(int priority, PCB *item)
     printf("Success add to priorityQ\n");
 
     return true;
+};
+
+bool remove_from_queue(int pid ){
+
+    PCB *PCBSender = NULL; // Initialize to NULL to handle cases where PCB is not found
+    // Find sender ID across different priority levels
+
+     List *queues[9] = {highPriority, mediumPriority, lowPriority, blockQ, semList[0].pList, semList[1].pList, semList[2].pList, semList[3].pList, semList[4].pList};
+    
+    for (int i = 0; i < 9; i++)
+    {
+        List *queue = queues[i];
+    
+    PCBSender = (PCB *)List_search(queue, pComparator, (void *)&pid);
+    if (PCBSender != NULL)
+        {
+            List_remove(queue);
+            free(PCBSender);
+            return true;
+        }
+    
+    }
+
+    return false; 
+    
+};
+
+const char *getStateName ( enum processState state){
+    switch (state)
+    {
+    case READY: return "READY";
+        break;
+    case RUNNING: return "RUNNING";
+        break;
+    case BLOCKED: return "BLOCKED";
+        break;
+    case DEADLOCK: return "DEADLOCK";
+        break;
+    
+    default:
+        return "invalid state";
+        break;
+    }
+};
+
+const char *getPriorityName ( int priority){
+    switch (priority)
+    {
+    case 0: return "High";
+        break;
+    case 1: return "Medium";
+        break;
+    case 2: return "Low";
+        break;   
+    default:
+        return "invalid priority";
+        break;
+    }
 };

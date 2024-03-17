@@ -57,5 +57,5 @@ extern List *blockQ;
 
 extern PCB *runningP;
 extern PCB *initP;
-extern sem semList[5];
+extern sem *semList;
 #endif // STRUCTURES_H
