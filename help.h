@@ -16,8 +16,6 @@ void total_info_helper(PCB *pcb);
 
 message* allocate_message(char *msg);
 
-void displayMenu();
-
 PCB* allocateProcess(int priority);
 
 void printState(PCB* process);
@@ -30,6 +28,7 @@ const char *getStateName ( enum processState);
 
 const char *getPriorityName ( int priority);
 
+const char *getQueueName ( int n);
 
 #endif
 

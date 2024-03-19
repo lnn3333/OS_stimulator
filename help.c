@@ -66,9 +66,7 @@ void total_info_helper(PCB *pcb)
     }
     else if (pcb->pid == initP->pid) // display info
     {
-        printf("The pid of PCB is %d\n", pcb->pid);
-        printf("The process is initP\n");
-        printf("The state of PCB is %s\n", getStateName(pcb->state)); 
+        printf("IinitP with pid %d\n",pcb->pid); 
     }
     else // display info
     {
@@ -76,25 +74,6 @@ void total_info_helper(PCB *pcb)
         printf("The priority of PCB is %s\n", getPriorityName(pcb->priority));
         printf("The state of PCB is %s\n", getStateName(pcb->state)); 
     }
-}
-
-// Process cmd from the terminal
-void displayMenu()
-{
-    printf("\nSimulation Menu:\n");
-    printf("C: Create a process\n");
-    printf("F: Fork a process\n");
-    printf("K: Kill a process\n");
-    printf("E: Exit the simulation\n");
-    printf("Q: Quantum the simulation\n");
-    printf("S: Send message to Process pid\n");
-    printf("R: Receive message\n");
-    printf("Y: Reply message to Process pid\n");
-    printf("N: Create new SEM\n");
-    printf("P: Operate sem P operation\n");
-    printf("V: Operate sem V operation\n");
-    printf("I: Print process info\n");
-    printf("T: Print all info\n");
 }
 
 PCB *allocateProcess(int priority)
@@ -214,6 +193,33 @@ const char *getPriorityName ( int priority){
         break;   
     default:
         return "invalid priority";
+        break;
+    }
+};
+
+const char *getQueueName ( int n){
+    switch (n)
+    {
+    case 0: return "High Priority Queue";
+        break;
+    case 1: return "Medium Priority Queue";
+        break;
+    case 2: return "Low  Priority Queue";
+        break;   
+    case 3: return "Block Process by Send() or Receive()";
+        break;   
+    case 4: return "Block Process by Semaphore 0 Queue";
+        break;   
+    case 5: return "Block Process by Semaphore 1 Queue";
+        break;   
+    case 6: return "Block Process by Semaphore 2 Queue";
+        break;   
+    case 7: return "Block Process by Semaphore 3 Queue";
+        break;   
+    case 8: return "Block Process by Semaphore 4 Queue";
+        break;   
+    default:
+        return "\n";
         break;
     }
 };
