@@ -15,7 +15,7 @@ sem *semList = NULL; // Assuming semList is an array of semaphores
 bool createProcess(int priority)
 {
 
-    if( (initP!=NULL && priority ==  3))
+    if ((initP != NULL && priority == 3))
     {
         printf("Error: invalid priority\n");
         return false;
@@ -31,7 +31,7 @@ bool createProcess(int priority)
 
     // add to ready Q
     add_to_priority(priority, new_process);
-    printf("Sucess create process PID %d\n",new_process->pid);
+    printf("Sucess create process PID %d\n", new_process->pid);
     proc_info(new_process->pid);
     return true;
 }
@@ -54,6 +54,7 @@ bool forkProcess()
     }
     memcpy(runningPCopy, runningP, sizeof(PCB));
     runningPCopy->pid = findPID();
+    runningPCopy->state = READY;
 
     // add to readyQ
     if (add_to_priority(runningPCopy->priority, runningPCopy) == false)
@@ -79,13 +80,13 @@ bool kill(int pid)
     {
         free(runningP);
         runningP = NULL;
-        //get the next runnning P
+        // get the next runnning P
         quantum();
     }
     // Search and remove from priority queues only
     remove_from_queue(pid);
     printf("Suceed removing PID %d\n", pid);
-   
+
     return true;
 };
 
@@ -110,28 +111,28 @@ void exitProcess()
             }
         }
     }
-    //get the next running process
-    quantum();
 };
 
 bool cpu_scheduler()
 {
-   //append the running P to the low priority queue 
+    // append the running P to the low priority queue
 
     if (runningP != NULL && runningP->pid != initP->pid && runningP->state != BLOCKED)
     {
         PCB *resumeP = runningP;
         resumeP->priority = 2;
-        if (add_to_priority(2,resumeP) == false)
+        resumeP->state = READY;
+        if (add_to_priority(2, resumeP) == false)
         {
             return false;
         }
     }
-    else if (runningP !=NULL && runningP->pid == initP->pid){
+    else if (runningP != NULL && runningP->pid == initP->pid)
+    {
         initP->state = READY;
         runningP = NULL;
     }
-//find the next running P
+    // find the next running P
     PCB *nextP;
     if (List_count(highPriority) > 0)
     {
@@ -160,16 +161,18 @@ bool cpu_scheduler()
     }
     runningP = nextP;
     runningP->state = RUNNING;
-    //check if there is any reply message in proc_message to be display
-    if( runningP->proc_message != NULL){
-        if (runningP->proc_message->senderPid == -1){
-        char* reply_msg = runningP->proc_message->msg;
-        printf("The reply message: %s\n", reply_msg);
-         // free the mailbox
-        free(runningP->proc_message);
+    // check if there is any reply message in proc_message to be display
+    if (runningP->proc_message != NULL)
+    {
+        if (runningP->proc_message->senderPid == -1)
+        {
+            char *reply_msg = runningP->proc_message->msg;
+            printf("The reply message: %s\n", reply_msg);
+            // free the mailbox
+            free(runningP->proc_message);
+        }
     }
-    }
-    
+
     return true;
 };
 
@@ -179,10 +182,10 @@ void quantum()
     if (res == false)
     {
         printf("Error from cpu scheduling\n");
-        return ;
+        return;
     }
     total_info_helper(runningP);
-    return ;
+    return;
 };
 
 bool send(int pid, char *msg)
@@ -199,26 +202,25 @@ bool send(int pid, char *msg)
         return false;
     }
 
-// find pid of receiverP
+    // find pid of receiverP
     PCB *receiverP = (PCB *)findPCB(pid);
     if (receiverP == NULL)
     {
         printf("Error: receiver ID is invalid\n");
         return false;
     }
-// check if the receiver has a message sent by other process that has not yet receive on them already
-// if yes then cancel send operation, else send the message
+    // check if the receiver has a message sent by other process that has not yet receive on them already
+    // if yes then cancel send operation, else send the message
     if (receiverP->proc_message != NULL)
     {
         printf("Error: The receiver id cannot receive anymore message\n");
-        return false;   
+        return false;
     }
-// allocate message package
-    if (( receiverP->proc_message = allocate_message(msg) )== NULL)
+    // allocate message package
+    if ((receiverP->proc_message = allocate_message(msg)) == NULL)
     {
         return false;
     }
-
 
     // block P
     if (runningP->pid != initP->pid)
@@ -230,20 +232,20 @@ bool send(int pid, char *msg)
             printf("Error: Failed to append blockP to list\n");
             return false;
         }
-        printf("Block Process senderID : %d\n", receiverP->proc_message->senderPid);     
-      //get the next running process
+        printf("Block Process senderID : %d\n", receiverP->proc_message->senderPid);
+        // get the next running process
         quantum();
     }
 
     printf("Success send message to PID %d with msg: %s\n", pid, msg);
-
 
     return true;
 };
 
 bool receive()
 {
-    if(runningP == NULL){
+    if (runningP == NULL)
+    {
         printf("Error: there is no running Process\n");
         return false;
     }
@@ -265,14 +267,14 @@ bool receive()
             }
         }
         printf("Block Process PID : %d\n", receiveP->pid);
-        //get the next running process
+        // get the next running process
         quantum();
         return false;
     }
-//print the receive message 
+    // print the receive message
 
-    char* receive_msg = receiveP->proc_message->msg;
-    printf("The receive message: %s\n",receive_msg);
+    char *receive_msg = receiveP->proc_message->msg;
+    printf("The receive message: %s\n", receive_msg);
 
     // get sender id
     int senderID = receiveP->proc_message->senderPid;
@@ -283,29 +285,28 @@ bool receive()
         printf("Error: cannot reply to sender with pid %d \n", senderID);
         return 0;
     }
-     //empty the message box (proc_msg)
+    // empty the message box (proc_msg)
     free(receiveP->proc_message);
-
-    
-   
 
     return true;
 };
 
 bool reply(int pid, char *msg)
 {
-    if (msg == NULL){
+    if (msg == NULL)
+    {
         printf("Error: message reply is NULL\n");
         return false;
     }
-    void* ptr_pid = &pid;
+    void *ptr_pid = &pid;
     PCB *PCB_sender = (PCB *)List_search(blockQ, pComparator, ptr_pid);
-    if (PCB_sender == NULL){
+    if (PCB_sender == NULL)
+    {
         printf("Error: invalid PID or the Process PID has not been blocked by Send\n");
         return false;
     }
 
-//append message to the reply Process
+    // append message to the reply Process
     if ((PCB_sender->proc_message = allocate_message(msg)) == NULL)
     {
         return false;
@@ -313,15 +314,14 @@ bool reply(int pid, char *msg)
     strcpy(PCB_sender->proc_message->msg, msg);
     PCB_sender->proc_message->senderPid = -1;
 
- // unblock the sender
+    // unblock the sender
     PCB_sender->state = READY;
     List_remove(blockQ);
 
-// add the unblock P back to ready Q
+    // add the unblock P back to ready Q
     if (add_to_priority(PCB_sender->priority, PCB_sender) == false)
     {
         return false;
-
     };
     printf("Unblock sender ID %d \n", PCB_sender->pid);
 
@@ -330,7 +330,7 @@ bool reply(int pid, char *msg)
 
 bool new_sem(int semID)
 {
-    
+
     if (semList[semID].pList != NULL)
     {
         printf("Error: Semaphore %d has already been created\n", semID);
@@ -351,14 +351,14 @@ bool new_sem(int semID)
 
 bool P(int semID)
 {
-//check if semID value is valid
+    // check if semID value is valid
     if (semID < 0 || semID > 4)
     {
         printf("Error: Semaphore ID is out of range\n");
         return false;
     }
 
-//check if the sem has been created yet
+    // check if the sem has been created yet
 
     sem *getSem = &semList[semID];
 
@@ -367,26 +367,26 @@ bool P(int semID)
         printf("Error: the Semaphore has not been created\n");
         return false;
     }
-// check if there is running process (so we can perfore P on it)
+    // check if there is running process (so we can perfore P on it)
     if (runningP == NULL)
     {
         printf("Error: There is no current running Process\n");
         return false;
     }
-// check if the runningP is initP, if yes, we can not block the runningP
+    // check if the runningP is initP, if yes, we can not block the runningP
     if (runningP == initP)
     {
         printf("Error: Cannot blocked init Process\n");
         return false;
     }
-// P operation perform
+    // P operation perform
 
     getSem->value--;
-// If semaphore value is negative, block the process
-    printf ("Semaphore value is %d\n",getSem->value);
+    // If semaphore value is negative, block the process
+    printf("Semaphore value is %d\n", getSem->value);
     if (getSem->value < 0)
     {
-// Add runningP to the semaphore's process list
+        // Add runningP to the semaphore's process list
         PCB *blockP = runningP;
         if (List_append(getSem->pList, blockP) == LIST_FAIL)
         {
@@ -395,11 +395,9 @@ bool P(int semID)
         }
         printf("Success: Process PID %d blocked on semaphore %d\n", blockP->pid, semID);
         blockP->state = BLOCKED;
-        //get the next running process
+        // get the next running process
         quantum();
     }
-   
-    
 
     return true;
 }
@@ -422,12 +420,12 @@ bool V(int semID)
     printf("Value of sem %d\n", getSem->value);
     if (getSem->value <= 0)
     {
-// Check if there are processes waiting on the semaphore
+        // Check if there are processes waiting on the semaphore
         if (List_count(getSem->pList) > 0)
         {
             // Get the first process waiting on the semaphore
             List_first(getSem->pList);
-            PCB* waitingProcess = (PCB *)List_remove(getSem->pList);
+            PCB *waitingProcess = (PCB *)List_remove(getSem->pList);
             // unblock the process, add back to readyQ
             waitingProcess->state = READY;
             if (add_to_priority(waitingProcess->priority, waitingProcess) == false)
@@ -464,9 +462,9 @@ void total_info(void)
     // Loop through each priority queue
     for (int i = 0; i < 9; i++)
     {
-       
+
         List *queue = queues[i];
-        // Check if the priority queue is not empty    
+        // Check if the priority queue is not empty
         if (List_count(queue) > 0)
         {
             printf("%s\n", getQueueName(i));
@@ -479,9 +477,8 @@ void total_info(void)
                 total_info_helper(PCB_ptr);
                 node_ptr = node_ptr->pNext;
             }
-        printf("\n");
+            printf("\n");
         }
-       
     }
     if (runningP != NULL || runningP == initP)
     {
@@ -494,7 +491,7 @@ void total_info(void)
 
 void Init()
 {
-// Initialis  queues: 3 ready queues, 1 block queue, 
+    // Initialis  queues: 3 ready queues, 1 block queue,
     lowPriority = List_create();
     if (lowPriority == NULL)
     {
@@ -523,7 +520,7 @@ void Init()
         return;
     }
 
-// Initialize List for the semaphore
+    // Initialize List for the semaphore
     semList = (sem *)malloc(sizeof(sem) * 5);
     if (semList == NULL)
     {
@@ -536,13 +533,14 @@ void Init()
         semList[i].pList = NULL;
     }
 
-// Initialize initP
+    // Initialize initP
     initP = allocateProcess(3);
     runningP = initP;
     runningP->state = RUNNING;
 }
-void menu(){
-    //print the menu for user 
+void menu()
+{
+    // print the menu for user
     printf("\nSimulation Menu:\n");
     printf("Enter command and parameter: \n");
     printf("C <priority>: Create a process\n");
@@ -577,7 +575,7 @@ void processCommand()
             printf("Error: Unable to allocate memory for message.\n");
             exit(EXIT_FAILURE); // Or take appropriate action
         }
-       
+
         scanf(" %c", &command);
 
         // Process user input
@@ -588,15 +586,16 @@ void processCommand()
         {
             scanf("%d", &priority);
             int p = priority;
-            if(p>=0 && p <=3){
+            if (p >= 0 && p <= 3)
+            {
                 createProcess(priority);
                 break;
             }
-            else{
+            else
+            {
                 printf("Error: invalid priority\n");
-                break  ;
+                break;
             }
-           
         }
         case 'F':
             forkProcess();
@@ -616,7 +615,7 @@ void processCommand()
             scanf("%s", msg);
             send(id, msg);
             break;
-        case 'R': 
+        case 'R':
             receive();
             break;
         case 'Y':
@@ -629,7 +628,7 @@ void processCommand()
             if (id < 0 || id > 4)
             {
                 printf("Error: Semaphore ID is out of range\n");
-                return ;
+                return;
             }
             new_sem(id);
             break;
@@ -654,7 +653,6 @@ void processCommand()
         }
     }
 }
-
 
 int main(int argc, char *argv[])
 {
