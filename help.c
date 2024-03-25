@@ -93,11 +93,6 @@ PCB *allocateProcess(int priority)
     return newPCB;
 }
 
-void printState(PCB *process)
-{
-    printf("State of PID %d is %d:", process->pid, process->state);
-}
-
 bool add_to_priority(int priority, PCB *item)
 {
     if (item == NULL)

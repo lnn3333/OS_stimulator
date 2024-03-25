@@ -18,8 +18,6 @@ message* allocate_message(char *msg);
 
 PCB* allocateProcess(int priority);
 
-void printState(PCB* process);
-
 bool add_to_priority(int priority, PCB* item);
 
 bool remove_from_queue(int pid );
