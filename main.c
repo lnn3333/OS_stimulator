@@ -234,6 +234,7 @@ bool send(int pid, char *msg)
         }
         printf("Block Process senderID : %d\n", receiverP->proc_message->senderPid);
         // get the next running process
+        printf("The next running process is:\n");
         quantum();
     }
 
@@ -268,6 +269,7 @@ bool receive()
         }
         printf("Block Process PID : %d\n", receiveP->pid);
         // get the next running process
+        printf("The next running process is:\n");
         quantum();
         return false;
     }
@@ -396,6 +398,7 @@ bool P(int semID)
         printf("Success: Process PID %d blocked on semaphore %d\n", blockP->pid, semID);
         blockP->state = BLOCKED;
         // get the next running process
+        printf("The next running process is:\n");
         quantum();
     }
 

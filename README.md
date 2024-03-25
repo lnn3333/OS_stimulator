@@ -179,7 +179,9 @@ Semahore ID validation
 PCB validation: check if the runnningP is initP, cannot blocked.
 
 Operating process:
-It decrements the semaphore's value and blocks the process (add to the semaphore block list) if the semaphore value becomes negative.
+It decrements the semaphore's value and blocks the process (add to the semaphore block list) if the semaphore value becomes negative. 
+Note: initial value of semaphore is set default to 1 when created. If the value is 0, the running process would be blocked
+
 Get the next runningP (by calling quantum())
 
 xi. V(int semID)
