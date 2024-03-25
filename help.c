@@ -64,31 +64,16 @@ void total_info_helper(PCB *pcb)
     {
         printf("Error: cannot get the Sender PCB\n");
     }
+    else if (pcb->pid == initP->pid) // display info
+    {
+        printf("IinitP with pid %d\n",pcb->pid); 
+    }
     else // display info
     {
         printf("The pid of PCB is %d\n", pcb->pid);
         printf("The priority of PCB is %s\n", getPriorityName(pcb->priority));
         printf("The state of PCB is %s\n", getStateName(pcb->state)); 
     }
-}
-
-// Process cmd from the terminal
-void displayMenu()
-{
-    printf("\nSimulation Menu:\n");
-    printf("C: Create a process\n");
-    printf("F: Fork a process\n");
-    printf("K: Kill a process\n");
-    printf("E: Exit the simulation\n");
-    printf("Q: Quantum the simulation\n");
-    printf("S: Send message to Process pid\n");
-    printf("R: Receive message\n");
-    printf("Y: Reply message to Process pid\n");
-    printf("N: Create new SEM\n");
-    printf("P: Operate sem P operation\n");
-    printf("V: Operate sem V operation\n");
-    printf("I: Print process info\n");
-    printf("T: Print all info\n");
 }
 
 PCB *allocateProcess(int priority)
@@ -104,19 +89,8 @@ PCB *allocateProcess(int priority)
     newPCB->pid = findPID();
     newPCB->priority = priority;
     newPCB->state = READY;
-    newPCB->proc_message = List_create();
-    if (newPCB->proc_message == NULL)
-    {
-        printf("Error: cannot create list for PCB\n");
-        free(newPCB);
-        return NULL;
-    }
+    newPCB->proc_message = NULL;
     return newPCB;
-}
-
-void printState(PCB *process)
-{
-    printf("State of PID %d is %d:", process->pid, process->state);
 }
 
 bool add_to_priority(int priority, PCB *item)
@@ -156,7 +130,6 @@ bool add_to_priority(int priority, PCB *item)
         return false;
         break;
     }
-    printf("Success add to priorityQ\n");
 
     return true;
 };
@@ -172,8 +145,8 @@ bool remove_from_queue(int pid ){
     {
         List *queue = queues[i];
     
-    PCBSender = (PCB *)List_search(queue, pComparator, (void *)&pid);
-    if (PCBSender != NULL)
+        PCBSender = (PCB *)List_search(queue, pComparator, (void *)&pid);
+        if (PCBSender != NULL)
         {
             List_remove(queue);
             free(PCBSender);
@@ -215,6 +188,33 @@ const char *getPriorityName ( int priority){
         break;   
     default:
         return "invalid priority";
+        break;
+    }
+};
+
+const char *getQueueName ( int n){
+    switch (n)
+    {
+    case 0: return "High Priority Queue";
+        break;
+    case 1: return "Medium Priority Queue";
+        break;
+    case 2: return "Low  Priority Queue";
+        break;   
+    case 3: return "Block Process by Send() or Receive()";
+        break;   
+    case 4: return "Block Process by Semaphore 0 Queue";
+        break;   
+    case 5: return "Block Process by Semaphore 1 Queue";
+        break;   
+    case 6: return "Block Process by Semaphore 2 Queue";
+        break;   
+    case 7: return "Block Process by Semaphore 3 Queue";
+        break;   
+    case 8: return "Block Process by Semaphore 4 Queue";
+        break;   
+    default:
+        return "\n";
         break;
     }
 };

@@ -19,7 +19,13 @@ enum processState
     BLOCKED,
     DEADLOCK
 };
-
+// Define a structure to represent a message
+typedef struct message_S message;
+struct message_S
+{
+    int senderPid;
+    char msg[MAX_MSG_LENGTH + 1]; // +1 for null terminator
+};
 // Process Block Control data structure
 typedef struct PCB_s PCB;
 struct PCB_s
@@ -27,7 +33,7 @@ struct PCB_s
     int pid;
     int priority;
     enum processState state;
-    List *proc_message;
+    message *proc_message;
 };
 
 // Binary Semaphore data structure
@@ -40,13 +46,7 @@ struct sem_S
     List *pList;
 };
 
-// Define a structure to represent a message
-typedef struct message_S message;
-struct message_S
-{
-    int senderPid;
-    char msg[MAX_MSG_LENGTH + 1]; // +1 for null terminator
-};
+
 
 // Ready Q based on priority (high 2, medium 1, low 0)
 extern List *lowPriority;

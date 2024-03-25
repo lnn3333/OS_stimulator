@@ -6,7 +6,7 @@
 // Functions
 // Create| C: create a P, add to ready Q
 // Report Success or Failure, pid of created P
-int createProcess(int priority); //(0 = high, 1 = norm, 2 = low)
+bool createProcess(int priority); //(0 = high, 1 = norm, 2 = low)
 
 // Fork| F: copy current running P, add to ready Q
 // Report Success or Failure, pid of new P
@@ -21,9 +21,11 @@ bool kill(int pid);
 //  Reports P scheduling info, which P now get control of CPU
 void exitProcess();
 
+//helper function
+bool cpu_scheduler();
 // Quantum| Q: time quantum of running P expire
 // Report action taken (eg. process scheduling information)
-int quantum();
+void quantum();
 
 // Send| S: send a msg to another P - block until reply
 // Reports Success of Failure, scheduling info, once received the reply: the //msg and source of msg
